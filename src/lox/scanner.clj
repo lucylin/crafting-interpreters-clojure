@@ -16,10 +16,10 @@
 
 (def ^:private op-eq->token
   "One/two-character map to token type" {
-  \! [:bang :bang_equal]
-  \= [:equal :equal_equal]
-  \> [:greater :greater_equal]
-  \< [:less :less_equal] })
+  \! [:bang :bang-equal]
+  \= [:equal :equal-equal]
+  \> [:greater :greater-equal]
+  \< [:less :less-equal] })
 
 
 (defn- scan-token
