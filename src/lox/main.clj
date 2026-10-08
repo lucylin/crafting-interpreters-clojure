@@ -1,10 +1,16 @@
-(ns lox.main
-  (:require [clojure.string :as str]))
+(ns lox.main)
+
+(defn run
+  "Run the given code string"
+  [code]
+  (println code))
+
 
 (defn- run-file
   "Load the file at path and run it"
   [path]
-  (slurp path))  ; TODO: run(contents)
+  (run (slurp path)))
+
 
 (defn- run-prompt
   "Read input from the cmdline until there is none"
@@ -14,14 +20,17 @@
     (flush)
     (let [line (read-line)]
       (when (some? line)
-        (println line)  ; TODO: run(line)
+        (run line)
         (recur)))))
+
 
 (defn -main
   "Load & run the given file, or run interactively"
   [& args]
   (let [nargs (count args)]
     (cond
-      (> nargs 1) (println "usage: lox [script]")
+      (> nargs 1) (do
+        (println "usage: lox [script]")
+        (System/exit 64))
       (= nargs 1) (run-file (first args))
       :else (run-prompt))))
