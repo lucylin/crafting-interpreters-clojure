@@ -1,5 +1,11 @@
 (ns lox.scanner)
 
+
+(def ^:private whitespace
+  "Whitespace characters to discard" #{
+  \space \return \tab })
+
+
 (def ^:private char->token
   "Single-character map to token type" {
   \( :left-paren
@@ -34,11 +40,8 @@
           (update :remaining rest)
           (update :line inc))
 
-      (= c \/)  ; TODO: handle "//" comments
-       (-> state
-        (update :remaining rest)
-        (update :tokens conj
-          {:type :slash :lexeme "/" :literal nil :line (:line state)}))
+      (contains? whitespace c)
+        (state update :remaining rest)
 
       (some? c-tok)
         (-> state
@@ -52,11 +55,25 @@
               lex (if c-next-eq (str c \=) (str c))
               eat (if c-next-eq 2 1)]
           (-> state
-            (update :remaining (partial drop eat))
+            (update :remaining nthrest eat)
             (update :tokens conj
               {:type tok :lexeme lex :literal nil :line (:line state)})))
 
-      :else {})))  ; TODO: more stuff i guess
+      (and (= c \/) (= c-next \/))
+        (let [eat (count (take-while (partial not= \newline) (:remaining state)))]
+          (update state :remaining nthrest eat))
+
+      (= c \/)
+        (-> state
+          (update :remaining rest)
+          (update :tokens conj
+            {:type :slash :lexeme "/" :literal nil :line (:line state)}))
+
+      :else
+        (-> state
+          (update :remaining rest)
+          (update :errors conj
+            {:message (str "invalid char " c) :line (:line state)})))))
 
 
 (defn scan-tokens
@@ -71,6 +88,6 @@
 
 (comment
   (scan-tokens "(){}")
-  (scan-tokens "/(\n)")
+  (scan-tokens "//\n(\n)")
   (scan-tokens "!\n!=")
   (scan-tokens "lol"))
