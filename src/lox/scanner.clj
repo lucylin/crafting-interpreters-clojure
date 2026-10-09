@@ -24,7 +24,46 @@
    \> [:greater :greater-equal]
    \< [:less :less-equal]})
 
+(defn- add-error
+  [state error]
+  (update state :errors conj {:message error :line (:line state)}))
+
+(defn- add-token
+  [state token-type lexeme literal]
+  (update state :tokens conj
+          {:type token-type :lexeme lexeme :literal literal
+           :line (:line state)}))
+
+(defn- scan-str-lit
+  "Scan a string literal"
+  [state]
+  (loop [literal ""
+         new-lines 0
+         c-curr (second (:remaining state))  ; ignore the starting "
+         remaining (nthrest (:remaining state) 2)]
+    (cond
+      (nil? c-curr)
+      (-> state
+          (assoc :remaining remaining)
+          (update :line + new-lines)
+          (add-error "unterminated string"))
+
+      (= c-curr \")
+      (-> state
+          (assoc :remaining remaining)
+          (update :line + new-lines)
+          (add-token :string (str \" literal \") literal))
+
+      (= c-curr \newline)
+      (recur (str literal c-curr) (inc new-lines)
+             (first remaining) (rest remaining))
+
+      :else
+      (recur (str literal c-curr) new-lines
+             (first remaining) (rest remaining)))))
+
 (defn- scan-token
+  "Scan the next token (comprising one or more characters)"
   [state]
   (let [c (first (:remaining state))
         c-next (second (:remaining state))
@@ -36,14 +75,12 @@
           (update :remaining rest)
           (update :line inc))
 
-      (contains? whitespace c)
-      (state update :remaining rest)
+      (contains? whitespace c) (update state :remaining rest)
 
       (some? c-tok)
       (-> state
           (update :remaining rest)
-          (update :tokens conj
-                  {:type c-tok :lexeme (str c) :literal nil :line (:line state)}))
+          (add-token c-tok (str c) nil))
 
       (some? op-tok-bare)
       (let [c-next-eq (= c-next \=)
@@ -52,8 +89,7 @@
             eat (if c-next-eq 2 1)]
         (-> state
             (update :remaining nthrest eat)
-            (update :tokens conj
-                    {:type tok :lexeme lex :literal nil :line (:line state)})))
+            (add-token tok lex nil)))
 
       (and (= c \/) (= c-next \/))
       (let [eat (count (take-while (partial not= \newline) (:remaining state)))]
@@ -62,39 +98,14 @@
       (= c \/)
       (-> state
           (update :remaining rest)
-          (update :tokens conj
-                  {:type :slash :lexeme "/" :literal nil :line (:line state)}))
+          (add-token :slash "/" nil))
 
-      (= c \")
-      (loop [literal ""
-             added-lines 0
-             c-curr c-next
-             remaining (nthrest (:remaining state) 2)]
-        (cond
-          (nil? c-curr)
-          (-> state
-              (assoc :remaining remaining)
-              (update :line (partial + added-lines))
-              (update :error conj
-                      {:message "unterminated string" :line (:line state)}))
-          (= c-curr \")
-          (-> state
-              (assoc :remaining remaining) ; ignore final "
-              (update :line (partial + added-lines))
-              (update :tokens conj
-                      {:type :string :lexeme nil :literal literal :line (:line state)}))
-          (= c-curr \newline)
-          (recur (str literal c-curr) (inc added-lines)
-                 (first remaining) (rest remaining))
-          :else
-          (recur (str literal c-curr) added-lines
-                 (first remaining) (rest remaining))))
+      (= c \") (scan-str-lit state)
 
       :else
       (-> state
           (update :remaining rest)
-          (update :errors conj
-                  {:message (str "invalid char " c) :line (:line state)})))))
+          (add-error (str "unexpected character " c))))))
 
 (defn scan-tokens
   "Scan tokens from the given code string"
@@ -102,11 +113,12 @@
   (loop [state {:remaining code :line 1 :tokens [] :errors []}]
     (cond
       (nil? (first (:remaining state)))
+      ; TODO: add a proper token for :eof
       {:tokens (conj (:tokens state) :eof) :errors (:errors state)}
       :else (recur (scan-token state)))))
 
 (comment
-  (scan-tokens "(){}")
-  (scan-tokens "//\n(\n)")
+  (scan-tokens "( ){ }")
+  (scan-tokens "//hello\n(\n)")
   (scan-tokens "!\n!=")
   (scan-tokens "\"lol\"\nlol"))
