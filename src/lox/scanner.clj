@@ -69,6 +69,31 @@
           (update :tokens conj
             {:type :slash :lexeme "/" :literal nil :line (:line state)}))
 
+      (= c \")
+        (loop [literal ""
+               added-lines 0
+               c-curr c-next
+               remaining (nthrest (:remaining state) 2)]
+          (cond
+            (nil? c-curr)
+              (-> state
+                (assoc :remaining remaining)
+                (update :line (partial + added-lines))
+                (update :error conj
+                  {:message "unterminated string" :line (:line state)}))
+            (= c-curr \")
+              (-> state
+                (assoc :remaining remaining) ; ignore final "
+                (update :line (partial + added-lines))
+                (update :tokens conj
+                  {:type :string :lexeme nil :literal literal :line (:line state)}))
+            (= c-curr \newline)
+              (recur (str literal c-curr) (inc added-lines)
+                     (first remaining) (rest remaining))
+            :else
+              (recur (str literal c-curr) added-lines
+                     (first remaining) (rest remaining))))
+
       :else
         (-> state
           (update :remaining rest)
@@ -90,4 +115,4 @@
   (scan-tokens "(){}")
   (scan-tokens "//\n(\n)")
   (scan-tokens "!\n!=")
-  (scan-tokens "lol"))
+  (scan-tokens "\"lol\"\nlol"))
