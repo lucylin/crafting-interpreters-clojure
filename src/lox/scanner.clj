@@ -1,5 +1,8 @@
 (ns lox.scanner)
 
+(def ^:private digits
+  (set "0123456789"))
+
 (def ^:private whitespace
   "Whitespace characters to discard"
   #{\space \return \tab})
@@ -34,78 +37,95 @@
           {:type token-type :lexeme lexeme :literal literal
            :line (:line state)}))
 
+(defn- scan-num-lit
+  "Scan a numeric literal"
+  [state]
+  (loop [literal (str (first (:remaining state)))
+         c-seq (rest (:remaining state))]
+    (cond
+      (contains? digits (first c-seq))
+      (recur (str literal (first c-seq)) (rest c-seq))
+
+      (and (= (first c-seq) \.) (contains? digits (second c-seq)))
+      (recur (str literal (first c-seq)) (rest c-seq))
+
+      :else
+      (-> state
+          (assoc :remaining c-seq)
+          (add-token :number literal (parse-double literal))))))
+
 (defn- scan-str-lit
   "Scan a string literal"
   [state]
   (loop [literal ""
          new-lines 0
          c-curr (second (:remaining state))  ; ignore the starting "
-         remaining (nthrest (:remaining state) 2)]
+         c-nexts (nthrest (:remaining state) 2)]
     (cond
       (nil? c-curr)
       (-> state
-          (assoc :remaining remaining)
+          (assoc :remaining c-nexts)
           (update :line + new-lines)
           (add-error "unterminated string"))
 
       (= c-curr \")
       (-> state
-          (assoc :remaining remaining)
+          (assoc :remaining c-nexts)
           (update :line + new-lines)
           (add-token :string (str \" literal \") literal))
 
       (= c-curr \newline)
-      (recur (str literal c-curr) (inc new-lines)
-             (first remaining) (rest remaining))
+      (recur (str literal c-curr) (inc new-lines) (first c-nexts) (rest c-nexts))
 
       :else
-      (recur (str literal c-curr) new-lines
-             (first remaining) (rest remaining)))))
+      (recur (str literal c-curr) new-lines (first c-nexts) (rest c-nexts)))))
 
 (defn- scan-token
   "Scan the next token (comprising one or more characters)"
   [state]
-  (let [c (first (:remaining state))
+  (let [c-curr (first (:remaining state))
         c-next (second (:remaining state))
-        c-tok (char->token c)
-        [op-tok-bare op-tok-eq] (op-eq->token c)]
+        c-token (char->token c-curr)
+        [op-token-bare op-token-eq] (op-eq->token c-curr)]
     (cond
-      (= c \newline)
+      (= c-curr \newline)
       (-> state
           (update :remaining rest)
           (update :line inc))
 
-      (contains? whitespace c) (update state :remaining rest)
+      (contains? whitespace c-curr) (update state :remaining rest)
 
-      (some? c-tok)
+      (some? c-token)  ; ( ) + ...
       (-> state
           (update :remaining rest)
-          (add-token c-tok (str c) nil))
+          (add-token c-token (str c-curr) nil))
 
-      (some? op-tok-bare)
+      (some? op-token-bare)  ; ! != ...
       (let [c-next-eq (= c-next \=)
-            tok (if c-next-eq op-tok-eq op-tok-bare)
-            lex (if c-next-eq (str c \=) (str c))
+            tok (if c-next-eq op-token-eq op-token-bare)
+            lex (if c-next-eq (str c-curr \=) (str c-curr))
             eat (if c-next-eq 2 1)]
         (-> state
             (update :remaining nthrest eat)
             (add-token tok lex nil)))
 
-      (and (= c \/) (= c-next \/))
+      (and (= c-curr \/) (= c-next \/))  ; // comments
       (let [eat (count (take-while (partial not= \newline) (:remaining state)))]
         (update state :remaining nthrest eat))
 
-      (= c \/)
+      (= c-curr \/)  ; regular /
       (-> state
           (update :remaining rest)
           (add-token :slash "/" nil))
 
-      (= c \") (scan-str-lit state)
+      (= c-curr \") (scan-str-lit state)
+
+      (contains? digits c-curr) (scan-num-lit state)
 
       :else
       (-> state
           (update :remaining rest)
-          (add-error (str "unexpected character " c))))))
+          (add-error (str "unexpected character " c-curr))))))
 
 (defn scan-tokens
   "Scan tokens from the given code string"
@@ -121,4 +141,5 @@
   (scan-tokens "( ){ }")
   (scan-tokens "//hello\n(\n)")
   (scan-tokens "!\n!=")
+  (scan-tokens "123\n456.78+\n9.!")
   (scan-tokens "\"lol\"\nlol"))
