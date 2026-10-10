@@ -27,6 +27,8 @@
    \> [:greater :greater-equal]
    \< [:less :less-equal]})
 
+(defn- digit? [c] (contains? digits c))
+
 (defn- add-error
   [state error]
   (update state :errors conj {:message error :line (:line state)}))
@@ -37,98 +39,100 @@
           {:type token-type :lexeme lexeme :literal literal
            :line (:line state)}))
 
+(defn- split-num-frac
+  "Split characters into dot-fraction & rest"
+  [cs]
+  (let [[dot-c post-dot-c] cs]
+    (if (and (= dot-c \.) (digit? post-dot-c))
+      (let [[frac-cs rest-cs] (split-with digits (rest cs))]
+        [(cons \. frac-cs) rest-cs])
+      [nil cs])))
+
 (defn- scan-num-lit
-  "Scan a numeric literal"
+  "Scan a numeric literal and return updated scan state"
   [state]
-  (loop [literal (str (first (:remaining state)))
-         c-seq (rest (:remaining state))]
-    (cond
-      (contains? digits (first c-seq))
-      (recur (str literal (first c-seq)) (rest c-seq))
-
-      (and (= (first c-seq) \.) (contains? digits (second c-seq)))
-      (recur (str literal (first c-seq)) (rest c-seq))
-
-      :else
-      (-> state
-          (assoc :remaining c-seq)
-          (add-token :number literal (parse-double literal))))))
+  (let [[int-cs post-int-cs] (split-with digits (:remaining state))
+        [frac-cs rest-cs] (split-num-frac post-int-cs)
+        lexeme (apply str (concat int-cs frac-cs))]
+    (-> state
+        (assoc :remaining rest-cs)
+        (add-token :number lexeme (parse-double lexeme)))))
 
 (defn- scan-str-lit
-  "Scan a string literal"
+  "Scan a string literal and return updated scan state"
   [state]
   (loop [literal ""
-         new-lines 0
-         c-curr (second (:remaining state))  ; ignore the starting "
-         c-nexts (nthrest (:remaining state) 2)]
+         newlines 0
+         c (second (:remaining state))  ; ignore the starting "
+         cs (nthrest (:remaining state) 2)]
     (cond
-      (nil? c-curr)
+      (nil? c)
       (-> state
-          (assoc :remaining c-nexts)
-          (update :line + new-lines)
+          (assoc :remaining cs)
+          (update :line + newlines)
           (add-error "unterminated string"))
 
-      (= c-curr \")
+      (= c \")
       (-> state
-          (assoc :remaining c-nexts)
-          (update :line + new-lines)
+          (assoc :remaining cs)
+          (update :line + newlines)
           (add-token :string (str \" literal \") literal))
 
-      (= c-curr \newline)
-      (recur (str literal c-curr) (inc new-lines) (first c-nexts) (rest c-nexts))
+      (= c \newline)
+      (recur (str literal c) (inc newlines) (first cs) (rest cs))
 
       :else
-      (recur (str literal c-curr) new-lines (first c-nexts) (rest c-nexts)))))
+      (recur (str literal c) newlines (first cs) (rest cs)))))
 
 (defn- scan-token
-  "Scan the next token (comprising one or more characters)"
+  "Scan the next token (one or more characters) and return updated scan state"
   [state]
-  (let [c-curr (first (:remaining state))
-        c-next (second (:remaining state))
-        c-token (char->token c-curr)
-        [op-token-bare op-token-eq] (op-eq->token c-curr)]
+  (let [c (first (:remaining state))
+        c-token (char->token c)
+        next-c (second (:remaining state))
+        [op-token-bare op-token-eq] (op-eq->token c)]
     (cond
-      (= c-curr \newline)
+      (= c \newline)
       (-> state
           (update :remaining rest)
           (update :line inc))
 
-      (contains? whitespace c-curr) (update state :remaining rest)
+      (contains? whitespace c) (update state :remaining rest)
 
       (some? c-token)  ; ( ) + ...
       (-> state
           (update :remaining rest)
-          (add-token c-token (str c-curr) nil))
+          (add-token c-token (str c) nil))
 
       (some? op-token-bare)  ; ! != ...
-      (let [c-next-eq (= c-next \=)
-            tok (if c-next-eq op-token-eq op-token-bare)
-            lex (if c-next-eq (str c-curr \=) (str c-curr))
-            eat (if c-next-eq 2 1)]
+      (let [c-next-eq (= next-c \=)
+            token (if c-next-eq op-token-eq op-token-bare)
+            lexeme (if c-next-eq (str c \=) (str c))
+            eat-n (if c-next-eq 2 1)]
         (-> state
-            (update :remaining nthrest eat)
-            (add-token tok lex nil)))
+            (update :remaining nthrest eat-n)
+            (add-token token lexeme nil)))
 
-      (and (= c-curr \/) (= c-next \/))  ; // comments
-      (let [eat (count (take-while (partial not= \newline) (:remaining state)))]
-        (update state :remaining nthrest eat))
+      (and (= c \/) (= next-c \/))  ; // comments
+      (let [eat-n (count (take-while (partial not= \newline) (:remaining state)))]
+        (update state :remaining nthrest eat-n))
 
-      (= c-curr \/)  ; regular /
+      (= c \/)  ; regular /
       (-> state
           (update :remaining rest)
           (add-token :slash "/" nil))
 
-      (= c-curr \") (scan-str-lit state)
+      (= c \") (scan-str-lit state)
 
-      (contains? digits c-curr) (scan-num-lit state)
+      (contains? digits c) (scan-num-lit state)
 
       :else
       (-> state
           (update :remaining rest)
-          (add-error (str "unexpected character " c-curr))))))
+          (add-error (str "unexpected character " c))))))
 
 (defn scan-tokens
-  "Scan tokens from the given code string"
+  "Scan tokens from the given code string and return tokens & errors"
   [code]
   (loop [state {:remaining code :line 1 :tokens [] :errors []}]
     (cond
