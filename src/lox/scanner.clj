@@ -63,7 +63,7 @@
 (defn- add-token
   [state token-type lexeme literal]
   (update state :tokens conj
-          {:type token-type :lexeme lexeme :literal literal
+          {:token token-type :lexeme lexeme :literal literal
            :line (:line state)}))
 
 (defn- split-num-frac
@@ -177,7 +177,7 @@
     (cond
       (nil? (first (:remaining state)))
       {:tokens (conj (:tokens state)
-                     {:type :eof :lexeme nil :literal nil :line (:line state)})
+                     {:token :eof :lexeme nil :literal nil :line (:line state)})
        :errors (:errors state)}
       :else (recur (scan-token state)))))
 

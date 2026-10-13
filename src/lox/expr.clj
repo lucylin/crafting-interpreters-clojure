@@ -1,0 +1,18 @@
+(ns lox.expr)
+
+(defn ->literal-expr
+  [value]
+  {:type :literal-expr :value value})
+
+(defn ->unary-expr
+  [operator right]
+  {:type :unary-expr :operator operator :right right})
+
+(defn ->binary-expr
+  [left operator right]
+  {:type :binary-expr :left left :operator operator :right right})
+
+(defn ->grouping-expr
+  [expr]
+  {:type :grouping-expr :expr expr})
+
