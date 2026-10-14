@@ -2,17 +2,17 @@
   (:require [clojure.test :refer [deftest is testing are]]
             [lox.scanner :as scanner]))
 
-(defn- check-token-lex-ok
-  [input]
-  (let [result (scanner/scan-tokens input)]
-    (is (empty? (:errors result)))
-    (butlast (map #(dissoc % :line :literal) (:tokens result)))))
-
 (defn- check-token-ok
   [input]
   (let [result (scanner/scan-tokens input)]
     (is (empty? (:errors result)))
     (butlast (:tokens result))))
+
+(defn- check-token-lex-ok
+  [input]
+  (let [result (scanner/scan-tokens input)]
+    (is (empty? (:errors result)))
+    (butlast (map #(dissoc % :line :literal) (:tokens result)))))
 
 (defn- count-tokens-errors
   [input]
@@ -29,7 +29,15 @@
            (count-tokens-errors "^$"))))
   (testing "unterminated string literal"
     (is (= {:num-tokens 0 :num-errors 1}
-           (count-tokens-errors "\"...")))))
+           (count-tokens-errors "\"..."))))
+  (testing "mixed tokens and errors"
+    (is (= {:tokens [{:token :bang, :lexeme "!", :literal nil, :line 2}
+                     {:token :eof, :lexeme nil, :literal nil, :line 2}]
+            :errors [{:message "unexpected character $", :line 1}
+                     {:message "unexpected character #", :line 1}
+                     {:message "unexpected character ^", :line 2}
+                     {:message "unexpected character &", :line 2}]}
+           (scanner/scan-tokens "$#\n^&!")))))
 
 (deftest test-single-char
   (are [input expected] (= expected (check-token-lex-ok input))
@@ -85,15 +93,15 @@
   (are [input expected] (= expected (check-token-lex-ok input))
     "and" [{:token :and :lexeme "and"}]
     "class" [{:token :class :lexeme "class"}]
-    "else"  [{:token :else :lexeme "else"}]
+    "else" [{:token :else :lexeme "else"}]
     "false" [{:token :false :lexeme "false"}]
     "for" [{:token :for :lexeme "for"}]
     "fun" [{:token :fun :lexeme "fun"}]
-    "if"  [{:token :if :lexeme "if"}]
+    "if" [{:token :if :lexeme "if"}]
     "nil" [{:token :nil :lexeme "nil"}]
-    "or"  [{:token :or :lexeme "or"}]
+    "or" [{:token :or :lexeme "or"}]
     "print" [{:token :print :lexeme "print"}]
-    "return"  [{:token :return :lexeme "return"}]
+    "return" [{:token :return :lexeme "return"}]
     "super" [{:token :super :lexeme "super"}]
     "this" [{:token :this :lexeme "this"}]
     "true" [{:token :true :lexeme "true"}]
@@ -104,8 +112,6 @@
   (are [input expected] (= expected (check-token-ok input))
     "forever" [{:token :identifier :lexeme "forever" :literal nil :line 1}]
     "meanwhile" [{:token :identifier :lexeme "meanwhile" :literal nil :line 1}]))
-
-; TODO:: check mixed tokens & errors
 
 (comment
   (clojure.test/run-tests 'lox.scanner-test))
