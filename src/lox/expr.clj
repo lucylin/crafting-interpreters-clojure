@@ -20,11 +20,13 @@
   [expr]
   (case (:type expr)
     :literal-expr (:value expr)
+
     :unary-expr (str "("
                      ((:lexeme (:operator expr))
                       " "
                       (pretty-expr (:right expr)))
                      ")")
+
     :binary-expr (str "("
                       (:lexeme (:operator expr))
                       " "
@@ -32,5 +34,7 @@
                       " "
                       (pretty-expr (:right expr))
                       ")")
-    :grouping-expr (str "(" (pretty-expr expr) ")")
+
+    :grouping-expr (pretty-expr (:expr expr))
+
     :else nil))

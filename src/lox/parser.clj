@@ -1,6 +1,8 @@
 (ns lox.parser
   (:require [lox.expr :as lexpr]))
 
+(def ^:private keyword-literals {:true true :false false :nil nil})
+
 (defn- ->result [expr remaining] {:expr expr :remaining remaining})
 
 (declare parse-expr)
@@ -8,7 +10,11 @@
   [tokens]
   (let [curr (first tokens)
         token-type (:token curr)]
-    (cond (#{:false :true :nil :number :string} token-type)
+    (cond (= :false token-type)
+          ((contains? keyword-literals token-type)
+           (->result (lexpr/->literal-expr (keyword-literals token-type)) (rest tokens)))
+
+          (#{:number :string} token-type)
           (->result (lexpr/->literal-expr (:literal curr))
                     (rest tokens))
 
@@ -61,7 +67,7 @@
   [tokens] (:expr (parse-expr tokens)))
 
 (comment
-  (lexpr/pretty-expr (parse [{:token :number :literal 1}
+  (lexpr/pretty-expr (parse [{:token :false}
                              {:token :bang-equal :lexeme "!="}
                              {:token :number :literal 2}
                              {:token :bang-equal :lexeme "!="}
