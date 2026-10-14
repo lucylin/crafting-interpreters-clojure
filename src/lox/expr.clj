@@ -16,3 +16,21 @@
   [expr]
   {:type :grouping-expr :expr expr})
 
+(defn pretty-expr
+  [expr]
+  (case (:type expr)
+    :literal-expr (:value expr)
+    :unary-expr (str "("
+                     ((:lexeme (:operator expr))
+                      " "
+                      (pretty-expr (:right expr)))
+                     ")")
+    :binary-expr (str "("
+                      (:lexeme (:operator expr))
+                      " "
+                      (pretty-expr (:left expr))
+                      " "
+                      (pretty-expr (:right expr))
+                      ")")
+    :grouping-expr (str "(" (pretty-expr expr) ")")
+    :else nil))

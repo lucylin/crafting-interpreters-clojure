@@ -15,7 +15,7 @@
           (= :left-paren token-type)
           (let [{:keys [expr remaining]} (parse-expr (rest tokens))]
             ; consume the ")"
-            (->result expr (rest remaining))))))
+            (->result (lexpr/->grouping-expr expr) (rest remaining))))))
 
 (defn- parse-unary
   [tokens]
@@ -61,22 +61,22 @@
   [tokens] (:expr (parse-expr tokens)))
 
 (comment
-  (parse [{:token :number :literal 1}
-          {:token :bang-equal}
-          {:token :number :literal 2}
-          {:token :bang-equal}
-          {:token :number :literal 3}])
-  (parse [{:token :number :literal 0}
-          {:token :less}
-          {:token :number :literal 2}
-          {:token :minus}
-          {:token :number :literal 1}
-          {:token :bang-equal}
-          {:token :number :literal 2}])
-  (parse [{:token :number :literal 1}
-          {:token :plus}
-          {:token :number :literal 2}
-          {:token :star}
-          {:token :number :literal 3}
-          {:token :equal-equal}
-          {:token :number :literal 7}]))
+  (lexpr/pretty-expr (parse [{:token :number :literal 1}
+                             {:token :bang-equal :lexeme "!="}
+                             {:token :number :literal 2}
+                             {:token :bang-equal :lexeme "!="}
+                             {:token :number :literal 3}]))
+  (lexpr/pretty-expr (parse [{:token :number :literal 0}
+                             {:token :less :lexeme "<"}
+                             {:token :number :literal 2}
+                             {:token :minus :lexeme "-"}
+                             {:token :number :literal 1}
+                             {:token :bang-equal :lexeme "!="}
+                             {:token :number :literal 2}]))
+  (lexpr/pretty-expr (parse [{:token :number :literal 1}
+                             {:token :plus :lexeme "+"}
+                             {:token :number :literal 2}
+                             {:token :star :lexeme "*"}
+                             {:token :number :literal 3}
+                             {:token :equal-equal :lexeme "=="}
+                             {:token :number :literal 7}])))
