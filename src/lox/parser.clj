@@ -5,6 +5,14 @@
 
 (defn- ->result [expr remaining] {:expr expr :remaining remaining})
 
+(defn- parse-error [token message state]
+  (throw (ex-info message {:type :parse-error :token token :state state})))
+
+(defn- eat [tokens expected error-message]
+  (cond
+    (= expected (:token (first tokens))) (rest tokens)
+    :else (parse-error (first tokens) error-message {:remaining (rest tokens)})))
+
 (declare parse-expr)
 (defn- parse-primary
   [tokens]
@@ -19,9 +27,12 @@
                     (rest tokens))
 
           (= :left-paren token-type)
-          (let [{:keys [expr remaining]} (parse-expr (rest tokens))]
-            ; consume the ")"
-            (->result (lexpr/->grouping-expr expr) (rest remaining))))))
+          (let [{:keys [expr remaining]} (parse-expr (rest tokens))
+                remaining' (eat remaining :right-paren "Expect ')' after expression")]
+            (->result (lexpr/->grouping-expr expr) remaining'))
+
+          :else
+          (parse-error (first tokens) "Expect expression" {:remaining (rest tokens)}))))
 
 (defn- parse-unary
   [tokens]
@@ -65,24 +76,3 @@
 (defn parse
   "Parse the list of tokens into an expression"
   [tokens] (:expr (parse-expr tokens)))
-
-(comment
-  (lexpr/pretty-expr (parse [{:token :false}
-                             {:token :bang-equal :lexeme "!="}
-                             {:token :number :literal 2}
-                             {:token :bang-equal :lexeme "!="}
-                             {:token :number :literal 3}]))
-  (lexpr/pretty-expr (parse [{:token :number :literal 0}
-                             {:token :less :lexeme "<"}
-                             {:token :number :literal 2}
-                             {:token :minus :lexeme "-"}
-                             {:token :number :literal 1}
-                             {:token :bang-equal :lexeme "!="}
-                             {:token :number :literal 2}]))
-  (lexpr/pretty-expr (parse [{:token :number :literal 1}
-                             {:token :plus :lexeme "+"}
-                             {:token :number :literal 2}
-                             {:token :star :lexeme "*"}
-                             {:token :number :literal 3}
-                             {:token :equal-equal :lexeme "=="}
-                             {:token :number :literal 7}])))

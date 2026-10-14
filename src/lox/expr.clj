@@ -21,20 +21,13 @@
   (case (:type expr)
     :literal-expr (:value expr)
 
-    :unary-expr (str "("
-                     ((:lexeme (:operator expr))
-                      " "
-                      (pretty-expr (:right expr)))
-                     ")")
+    :unary-expr [(:token (:operator expr))
+                 (pretty-expr (:right expr))]
 
-    :binary-expr (str "("
-                      (:lexeme (:operator expr))
-                      " "
-                      (pretty-expr (:left expr))
-                      " "
-                      (pretty-expr (:right expr))
-                      ")")
+    :binary-expr [(:token (:operator expr))
+                  (pretty-expr (:left expr))
+                  (pretty-expr (:right expr))]
 
-    :grouping-expr (pretty-expr (:expr expr))
+    :grouping-expr [(pretty-expr (:expr expr))]
 
     :else nil))
