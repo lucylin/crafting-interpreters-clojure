@@ -1,10 +1,12 @@
 (ns lox.main
-  (:require [lox.scanner :as scanner]))
+  (:require [lox.interp :as interp]
+            [lox.parser :as parser]
+            [lox.scanner :as scanner]))
 
 (defn run
   "Run the given code string"
   [code]
-  (scanner/scan-tokens code))
+  (interp/interpret (parser/parse (:tokens (scanner/scan-tokens code)))))
 
 (defn- run-file
   "Load the file at path and run it"
