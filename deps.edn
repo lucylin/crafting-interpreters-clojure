@@ -1,4 +1,6 @@
 {:paths ["src"]
  :deps {}
  :aliases
- {:test {:extra-paths ["test"]}}}
+ {:test {:extra-paths ["test"]}
+  :nrepl {:extra-deps {nrepl/nrepl {:mvn/version "1.8.0"}}
+          :main-opts ["-m" "nrepl.cmdline"]}}}

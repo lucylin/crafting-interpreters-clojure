@@ -16,3 +16,16 @@
   [expr]
   {:type :grouping-expr :expr expr})
 
+(defn pretty-expr
+  [expr]
+  (case (:type expr)
+    :literal-expr (:value expr)
+
+    :unary-expr [(:token (:operator expr))
+                 (pretty-expr (:right expr))]
+
+    :binary-expr [(:token (:operator expr))
+                  (pretty-expr (:left expr))
+                  (pretty-expr (:right expr))]
+
+    :grouping-expr [(pretty-expr (:expr expr))]))
