@@ -28,6 +28,4 @@
                   (pretty-expr (:left expr))
                   (pretty-expr (:right expr))]
 
-    :grouping-expr [(pretty-expr (:expr expr))]
-
-    :else nil))
+    :grouping-expr [(pretty-expr (:expr expr))]))

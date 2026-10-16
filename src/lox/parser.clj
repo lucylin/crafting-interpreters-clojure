@@ -18,9 +18,8 @@
   [tokens]
   (let [curr (first tokens)
         token-type (:token curr)]
-    (cond (= :false token-type)
-          ((contains? keyword-literals token-type)
-           (->result (lexpr/->literal-expr (keyword-literals token-type)) (rest tokens)))
+    (cond (contains? keyword-literals token-type)
+          (->result (lexpr/->literal-expr (keyword-literals token-type)) (rest tokens))
 
           (#{:number :string} token-type)
           (->result (lexpr/->literal-expr (:literal curr))
@@ -58,7 +57,7 @@
 (defn- parse-factor
   [tokens] (parse-binary-help tokens #{:slash :star} parse-unary))
 
-(defn parse-term
+(defn- parse-term
   [tokens] (parse-binary-help tokens #{:minus :plus} parse-factor))
 
 (defn- parse-comparison
@@ -75,4 +74,10 @@
 
 (defn parse
   "Parse the list of tokens into an expression"
-  [tokens] (:expr (parse-expr tokens)))
+  [tokens]
+  (let [{:keys [expr remaining]} (parse-expr tokens)]
+    (cond
+      (= :eof (:token (first remaining))) expr
+      :else (parse-error (first remaining)
+                         "Unexpected tokens remaining"
+                         {:remaining (rest remaining)}))))
