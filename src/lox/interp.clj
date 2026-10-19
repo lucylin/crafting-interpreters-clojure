@@ -59,7 +59,7 @@
       :else (runtime-error op "Invalid binary operation"
                            {:left left :right right}))))
 
-(defn- evaluate
+(defn evaluate
   [expr]
   (case (:type expr)
     :literal-expr (:value expr)
@@ -68,6 +68,17 @@
     :binary-expr (evaluate-binary expr)
     (runtime-error nil "Unknown expression type" {:expr expr})))
 
+(defn- interpret-stmt
+  [stmt]
+  (case (:type stmt)
+    :expr-stmt (evaluate (:expr stmt))
+
+    ; TODO: see if stringify() from the book is needed
+    :print-stmt (println (evaluate (:expr stmt)))
+
+    (runtime-error nil "Unknown statement type" {:stmt stmt})))
+
 (defn interpret
-  [expr]
-  (evaluate expr))
+  [stmts]
+  ; TODO: exception handling
+  (map interpret-stmt stmts))
