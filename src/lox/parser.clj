@@ -16,11 +16,11 @@
   (let [token (:token (ex-data ex))
         message (ex-message ex)]
     {:type :parse-error :message message
-     :line (:line token) :token (:token token)}))
+     :line (:line token) :token (:type token)}))
 
 (defn- eat [tokens expected error-message]
   (cond
-    (= expected (:token (first tokens))) (rest tokens)
+    (= expected (:type (first tokens))) (rest tokens)
     :else (parse-ex (first tokens) error-message {:remaining tokens})))
 
 ;
@@ -33,7 +33,7 @@
 (defn- parse-primary
   [tokens]
   (let [curr (first tokens)
-        token-type (:token curr)]
+        token-type (:type curr)]
     (cond (contains? keyword-literals token-type)
           (->expr-result (lexpr/->literal-expr (keyword-literals token-type))
                          (rest tokens))
@@ -54,7 +54,7 @@
 (defn- parse-unary
   [tokens]
   (let [curr (first tokens)]
-    (cond (#{:bang :minus} (:token curr))
+    (cond (#{:bang :minus} (:type curr))
           (let [subparse (parse-unary (rest tokens))]
             (->expr-result (lexpr/->unary-expr curr (:expr subparse))
                            (:remaining subparse)))
@@ -64,7 +64,7 @@
   [tokens token-types parse-fn]
   (loop [{:keys [expr remaining]} (parse-fn tokens)]
     (cond
-      (token-types (:token (first remaining)))
+      (token-types (:type (first remaining)))
       (let [subparse (parse-fn (rest remaining))]
         (recur
          (->expr-result
@@ -108,7 +108,7 @@
 (defn- parse-stmt
   [tokens]
   (let [curr (first tokens)
-        {:keys [stmt remaining]} (case (:token curr)
+        {:keys [stmt remaining]} (case (:type curr)
                                    :print (parse-print-stmt (rest tokens))
                                    (parse-expr-stmt tokens))
         remaining' (eat remaining :semicolon
@@ -126,15 +126,15 @@
 
 (defn- is-sync-token
   [token]
-  (or (contains? sync-tokens (:token token))
-      (contains? sync-keywords (:token token))))
+  (or (contains? sync-tokens (:type token))
+      (contains? sync-keywords (:type token))))
 
 (defn- synchronize
   [tokens]
-  (let [tokens' (if (contains? sync-tokens (:token (first tokens))) tokens
+  (let [tokens' (if (contains? sync-tokens (:type (first tokens))) tokens
                     (drop-while #(not (is-sync-token %1)) (rest tokens)))]
     (cond
-      (= :semicolon (:token (first tokens')))
+      (= :semicolon (:type (first tokens')))
       (eat tokens' :semicolon "Unreachable error (expect semicolon)")
 
       ; don't eat keywords
@@ -151,7 +151,7 @@
          tokens' tokens
          errors []]
     (cond
-      (= :eof (:token (first tokens'))) {:stmts stmts :errors errors}
+      (= :eof (:type (first tokens'))) {:stmts stmts :errors errors}
 
       :else
       (let [{:keys [stmt remaining error]}
