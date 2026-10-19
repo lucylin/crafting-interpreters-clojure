@@ -20,7 +20,7 @@
 (defn- eat [tokens expected error-message]
   (cond
     (= expected (:token (first tokens))) (rest tokens)
-    :else (parse-ex (first tokens) error-message {:remaining (rest tokens)})))
+    :else (parse-ex (first tokens) error-message {:remaining tokens})))
 
 ;
 ; expr parsing
@@ -48,7 +48,7 @@
 
           :else
           (parse-ex (first tokens) "Expect expression"
-                    {:remaining (rest tokens)}))))
+                    {:remaining tokens}))))
 
 (defn- parse-unary
   [tokens]
@@ -118,15 +118,25 @@
 ; synchronize after errors
 ;
 
+(def ^:private sync-keywords
+  #{:class :for :fun :if :print :return :var :while})
+
 (def ^:private sync-tokens #{:semicolon :eof})
+
+(defn- is-sync-token
+  [token]
+  (or (contains? sync-tokens (:token token))
+      (contains? sync-keywords (:token token))))
 
 (defn- synchronize
   [tokens]
-  (let [tokens' (drop-while #(not (contains? sync-tokens (:token %1))) tokens)]
+  (let [tokens' (if (= :eof (:token (first tokens))) tokens
+                    (drop-while #(not (is-sync-token %1)) (rest tokens)))]
     (cond
-      (and (seq tokens') (= :semicolon (:token (first tokens'))))
+      (= :semicolon (:token (first tokens')))
       (eat tokens' :semicolon "Unreachable error (expect semicolon)")
 
+      ; don't eat keywords
       :else tokens')))
 
 ;
@@ -143,7 +153,7 @@
           (try
             (parse-stmt tokens')
             (catch clojure.lang.ExceptionInfo e
-              (let [state (ex-data e)]
+              (let [state (:state (ex-data e))]
                 (->stmt-result nil
                                (synchronize (:remaining state))
                                (parse-error e)))))
