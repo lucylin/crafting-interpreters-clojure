@@ -20,7 +20,9 @@
 
 (defn- eat [tokens expected error-message]
   (cond
-    (= expected (:type (first tokens))) (rest tokens)
+    (= expected (:type (first tokens)))
+    {:eaten (first tokens) :remaining (rest tokens)}
+
     :else (parse-ex (first tokens) error-message {:remaining tokens})))
 
 ;
@@ -44,8 +46,13 @@
 
           (= :left-paren token-type)
           (let [{:keys [expr remaining]} (parse-expr (rest tokens))
-                remaining' (eat remaining :right-paren "Expect ')' after expression")]
+                remaining' (:remaining (eat remaining
+                                            :right-paren
+                                            "Expect ')' after expression"))]
             (->expr-result (lexpr/->grouping-expr expr) remaining'))
+
+          (= :identifier token-type)
+          (->expr-result (lexpr/->var-expr (:lexeme curr)) (rest tokens))
 
           :else
           (parse-ex (first tokens) "Expect expression"
@@ -92,30 +99,6 @@
 (defn- parse-expr [tokens] (parse-equality tokens))
 
 ;
-; stmt parsing
-;
-
-(defn- parse-expr-stmt
-  [tokens]
-  (let [{:keys [expr remaining]} (parse-expr tokens)]
-    (->stmt-result (lstmt/->expr-stmt expr) remaining)))
-
-(defn- parse-print-stmt
-  [tokens]
-  (let [{:keys [expr remaining]} (parse-expr tokens)]
-    (->stmt-result (lstmt/->print-stmt expr) remaining)))
-
-(defn- parse-stmt
-  [tokens]
-  (let [curr (first tokens)
-        {:keys [stmt remaining]} (case (:type curr)
-                                   :print (parse-print-stmt (rest tokens))
-                                   (parse-expr-stmt tokens))
-        remaining' (eat remaining :semicolon
-                        "Expect semicolon at end of statement")]
-    (->stmt-result stmt remaining')))
-
-;
 ; synchronize after errors
 ;
 
@@ -135,10 +118,59 @@
                     (drop-while #(not (is-sync-token %1)) (rest tokens)))]
     (cond
       (= :semicolon (:type (first tokens')))
-      (eat tokens' :semicolon "Unreachable error (expect semicolon)")
+      (:remaining
+       (eat tokens' :semicolon "Unreachable error (expect semicolon)"))
 
       ; don't eat keywords
       :else tokens')))
+
+;
+; stmt parsing
+;
+
+(defn- parse-expr-stmt
+  [tokens]
+  (let [{:keys [expr remaining]} (parse-expr tokens)]
+    (->stmt-result (lstmt/->expr-stmt expr) remaining)))
+
+(defn- parse-print-stmt
+  [tokens]
+  (let [{:keys [expr remaining]} (parse-expr tokens)]
+    (->stmt-result (lstmt/->print-stmt expr) remaining)))
+
+(defn- parse-stmt
+  [tokens]
+  (let [curr (first tokens)
+        {:keys [stmt remaining]} (case (:type curr)
+                                   :print (parse-print-stmt (rest tokens))
+                                   (parse-expr-stmt tokens))
+        remaining' (:remaining
+                    (eat remaining :semicolon "Expect semicolon at end of statement"))]
+    (->stmt-result stmt remaining')))
+
+(defn- parse-declaration
+  [tokens]
+  (try
+    (if (= :var (:type (first tokens)))
+      (let [{:keys [eaten remaining]} (eat (rest tokens)
+                                           :identifier "Expect variable name")
+            var-name (:lexeme eaten)
+            initializer (if (= :equal (:type (first remaining)))
+                          (parse-expr (rest remaining))
+                          nil)
+            remaining' (eat (if initializer (:remaining initializer) remaining)
+                            :semicolon
+                            "Expect ';' after variable declaration")
+            stmt (lstmt/->var-stmt var-name
+                                   (if initializer (:expr initializer) nil))]
+        (->stmt-result stmt remaining'))
+
+      ; else: not a var declaration
+      (parse-stmt tokens))
+
+    (catch clojure.lang.ExceptionInfo e
+      (let [state (:state (ex-data e))]
+        (->stmt-result nil (synchronize (:remaining state)) (parse-error e))))))
 
 ;
 ; public parse() fn
@@ -154,14 +186,7 @@
       (= :eof (:type (first tokens'))) {:stmts stmts :errors errors}
 
       :else
-      (let [{:keys [stmt remaining error]}
-            (try
-              (parse-stmt tokens')
-              (catch clojure.lang.ExceptionInfo e
-                (let [state (:state (ex-data e))]
-                  (->stmt-result nil
-                                 (synchronize (:remaining state))
-                                 (parse-error e)))))
+      (let [{:keys [stmt remaining error]} (parse-declaration tokens')
             stmts' (if stmt (conj stmts stmt) stmts)
             errors' (if error (conj errors error) errors)]
         (recur stmts' remaining errors')))))

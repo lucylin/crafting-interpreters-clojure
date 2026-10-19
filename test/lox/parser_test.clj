@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is testing are]]
             [lox.expr :as lexpr]
             [lox.stmt :as lstmt]
+            [lox.parser :as parser]
             [lox.test-util :as util]))
 
 (defn- pretty-parse-expr
@@ -60,7 +61,12 @@
       "(1 + 2;" :semicolon
       "1 + 2);" :right-paren
       "1 + 2" :eof
-      "1 +" :eof)))
+      "1 +" :eof))
+
+  (testing "var expr"
+    (are [input expected] (= expected (pretty-parse-expr input))
+      "x" ["x"]
+      "x + 5" [:plus "x" 5.0])))
 
 (deftest test-print
   (testing "print success"
@@ -82,5 +88,16 @@
       (is (= :semicolon (:token (second errors))))
       (is (= [:expr-stmt 4.0] (lstmt/pretty-stmt (second stmts)))))))
 
+(deftest test-var
+  (testing "var declaration"
+    (are [input expected]
+         (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
+      "var x;" [:var-stmt :name "x" nil])))
+
 (comment
-  (clojure.test/run-tests 'lox.parser-test))
+  (clojure.test/run-tests 'lox.parser-test)
+  (parser/parse (util/scan-ok "var x;")))
+; [{:type :var, :lexeme "var", :literal nil, :line 1}
+;  {:type :identifier, :lexeme "x", :literal nil, :line 1}
+;  {:type :semicolon, :lexeme ";", :literal nil, :line 1}
+;  {:type :eof, :lexeme nil, :literal nil, :line 1}]
