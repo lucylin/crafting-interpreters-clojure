@@ -18,7 +18,7 @@
 
 (deftest test-basic
   (testing "end EOF"
-    (is (= {:tokens [{:token :eof :lexeme nil :literal nil :line 1}] :errors []}
+    (is (= {:tokens [{:type :eof :lexeme nil :literal nil :line 1}] :errors []}
            (scanner/scan-tokens ""))))
   (testing "invalid character"
     (is (= {:num-tokens 0 :num-errors 2}
@@ -27,8 +27,8 @@
     (is (= {:num-tokens 0 :num-errors 1}
            (count-tokens-errors "\"..."))))
   (testing "mixed tokens and errors"
-    (is (= {:tokens [{:token :bang, :lexeme "!", :literal nil, :line 2}
-                     {:token :eof, :lexeme nil, :literal nil, :line 2}]
+    (is (= {:tokens [{:type :bang, :lexeme "!", :literal nil, :line 2}
+                     {:type :eof, :lexeme nil, :literal nil, :line 2}]
             :errors [{:message "unexpected character $", :line 1}
                      {:message "unexpected character #", :line 1}
                      {:message "unexpected character ^", :line 2}
@@ -37,77 +37,77 @@
 
 (deftest test-single-char
   (are [input expected] (= expected (check-token-lex-ok input))
-    "(" [{:token :left-paren :lexeme "("}]
-    ")" [{:token :right-paren :lexeme ")"}]
-    "{" [{:token :left-brace :lexeme "{"}]
-    "}" [{:token :right-brace :lexeme "}"}]
-    "," [{:token :comma :lexeme ","}]
-    "." [{:token :dot :lexeme "."}]
-    "-" [{:token :minus :lexeme "-"}]
-    "+" [{:token :plus :lexeme "+"}]
-    ";" [{:token :semicolon :lexeme ";"}]
-    "*" [{:token :star :lexeme "*"}]))
+    "(" [{:type :left-paren :lexeme "("}]
+    ")" [{:type :right-paren :lexeme ")"}]
+    "{" [{:type :left-brace :lexeme "{"}]
+    "}" [{:type :right-brace :lexeme "}"}]
+    "," [{:type :comma :lexeme ","}]
+    "." [{:type :dot :lexeme "."}]
+    "-" [{:type :minus :lexeme "-"}]
+    "+" [{:type :plus :lexeme "+"}]
+    ";" [{:type :semicolon :lexeme ";"}]
+    "*" [{:type :star :lexeme "*"}]))
 
 (deftest test-equals-op
   (are [input expected] (= expected (check-token-lex-ok input))
-    "!!" [{:token :bang :lexeme "!"}
-          {:token :bang :lexeme "!"}]
-    "!=" [{:token :bang-equal :lexeme "!="}]
-    "=." [{:token :equal :lexeme "="}
-          {:token :dot :lexeme "."}]
-    "==" [{:token :equal-equal :lexeme "=="}]
-    ">>" [{:token :greater :lexeme ">"}
-          {:token :greater :lexeme ">"}]
-    ">=" [{:token :greater-equal :lexeme ">="}]
-    "<<" [{:token :less :lexeme "<"}
-          {:token :less :lexeme "<"}]
-    "<=" [{:token :less-equal :lexeme "<="}]))
+    "!!" [{:type :bang :lexeme "!"}
+          {:type :bang :lexeme "!"}]
+    "!=" [{:type :bang-equal :lexeme "!="}]
+    "=." [{:type :equal :lexeme "="}
+          {:type :dot :lexeme "."}]
+    "==" [{:type :equal-equal :lexeme "=="}]
+    ">>" [{:type :greater :lexeme ">"}
+          {:type :greater :lexeme ">"}]
+    ">=" [{:type :greater-equal :lexeme ">="}]
+    "<<" [{:type :less :lexeme "<"}
+          {:type :less :lexeme "<"}]
+    "<=" [{:type :less-equal :lexeme "<="}]))
 
 (deftest test-slash-comment
   (are [input expected] (= expected (check-token-ok input))
-    "/." [{:token :slash :lexeme "/" :literal nil :line 1}
-          {:token :dot :lexeme "." :literal nil :line 1}]
-    "// /xyz\n /" [{:token :slash :lexeme "/" :literal nil :line 2}]))
+    "/." [{:type :slash :lexeme "/" :literal nil :line 1}
+          {:type :dot :lexeme "." :literal nil :line 1}]
+    "// /xyz\n /" [{:type :slash :lexeme "/" :literal nil :line 2}]))
 
 (deftest test-string-literal
   (are [input expected] (= expected (check-token-ok input))
-    "\"hello world\n1\n\"!" [{:token :string :lexeme "\"hello world\n1\n\""
+    "\"hello world\n1\n\"!" [{:type :string :lexeme "\"hello world\n1\n\""
                               :literal "hello world\n1\n" :line 3}
-                             {:token :bang :lexeme "!" :literal nil :line 3}]
-    "\"// abc\"" [{:token :string :lexeme "\"// abc\""
+                             {:type :bang :lexeme "!" :literal nil :line 3}]
+    "\"// abc\"" [{:type :string :lexeme "\"// abc\""
                    :literal "// abc" :line 1}]))
 
 (deftest test-number-literal
   (are [input expected] (= expected (check-token-ok input))
-    "1234." [{:token :number :lexeme "1234" :literal 1234.0 :line 1}
-             {:token :dot :lexeme "." :literal nil :line 1}]
-    ".1234" [{:token :dot :lexeme "." :literal nil :line 1}
-             {:token :number :lexeme "1234" :literal 1234.0 :line 1}]
-    "12.34" [{:token :number :lexeme "12.34" :literal 12.34 :line 1}]))
+    "1234." [{:type :number :lexeme "1234" :literal 1234.0 :line 1}
+             {:type :dot :lexeme "." :literal nil :line 1}]
+    ".1234" [{:type :dot :lexeme "." :literal nil :line 1}
+             {:type :number :lexeme "1234" :literal 1234.0 :line 1}]
+    "12.34" [{:type :number :lexeme "12.34" :literal 12.34 :line 1}]))
 
 (deftest test-reserved
   (are [input expected] (= expected (check-token-lex-ok input))
-    "and" [{:token :and :lexeme "and"}]
-    "class" [{:token :class :lexeme "class"}]
-    "else" [{:token :else :lexeme "else"}]
-    "false" [{:token :false :lexeme "false"}]
-    "for" [{:token :for :lexeme "for"}]
-    "fun" [{:token :fun :lexeme "fun"}]
-    "if" [{:token :if :lexeme "if"}]
-    "nil" [{:token :nil :lexeme "nil"}]
-    "or" [{:token :or :lexeme "or"}]
-    "print" [{:token :print :lexeme "print"}]
-    "return" [{:token :return :lexeme "return"}]
-    "super" [{:token :super :lexeme "super"}]
-    "this" [{:token :this :lexeme "this"}]
-    "true" [{:token :true :lexeme "true"}]
-    "var" [{:token :var :lexeme "var"}]
-    "while" [{:token :while :lexeme "while"}]))
+    "and" [{:type :and :lexeme "and"}]
+    "class" [{:type :class :lexeme "class"}]
+    "else" [{:type :else :lexeme "else"}]
+    "false" [{:type :false :lexeme "false"}]
+    "for" [{:type :for :lexeme "for"}]
+    "fun" [{:type :fun :lexeme "fun"}]
+    "if" [{:type :if :lexeme "if"}]
+    "nil" [{:type :nil :lexeme "nil"}]
+    "or" [{:type :or :lexeme "or"}]
+    "print" [{:type :print :lexeme "print"}]
+    "return" [{:type :return :lexeme "return"}]
+    "super" [{:type :super :lexeme "super"}]
+    "this" [{:type :this :lexeme "this"}]
+    "true" [{:type :true :lexeme "true"}]
+    "var" [{:type :var :lexeme "var"}]
+    "while" [{:type :while :lexeme "while"}]))
 
 (deftest test-identifier
   (are [input expected] (= expected (check-token-ok input))
-    "forever" [{:token :identifier :lexeme "forever" :literal nil :line 1}]
-    "meanwhile" [{:token :identifier :lexeme "meanwhile" :literal nil :line 1}]))
+    "forever" [{:type :identifier :lexeme "forever" :literal nil :line 1}]
+    "meanwhile" [{:type :identifier :lexeme "meanwhile" :literal nil :line 1}]))
 
 (comment
   (clojure.test/run-tests 'lox.scanner-test))

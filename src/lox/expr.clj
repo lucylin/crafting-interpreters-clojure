@@ -21,10 +21,10 @@
   (case (:type expr)
     :literal-expr (:value expr)
 
-    :unary-expr [(:token (:operator expr))
+    :unary-expr [(:type (:operator expr))
                  (pretty-expr (:right expr))]
 
-    :binary-expr [(:token (:operator expr))
+    :binary-expr [(:type (:operator expr))
                   (pretty-expr (:left expr))
                   (pretty-expr (:right expr))]
 

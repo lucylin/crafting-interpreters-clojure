@@ -2,13 +2,13 @@
 
 (defn- runtime-ex
   [op message]
-  (throw (ex-info message {:type :runtime-error :line (:line op) :token (:token op)})))
+  (throw (ex-info message {:type :runtime-error :line (:line op) :token (:type op)})))
 
 (declare evaluate)
 (defn- evaluate-unary
   [expr]
   (let [result (evaluate (:right expr))]
-    (case (:token (:operator expr))
+    (case (:type (:operator expr))
       :bang (not result)
       :minus (if (number? result) (- result)
                  (runtime-ex (:operator expr)
@@ -27,7 +27,7 @@
   [left op right]
   (cond
     (and (number? left) (number? right))
-    ((binary-number-ops (:token op)) left right)
+    ((binary-number-ops (:type op)) left right)
 
     :else (runtime-ex op "Expect numbers as arguments")))
 
@@ -42,17 +42,17 @@
         right (evaluate (:right expr))]
 
     (cond
-      (= :plus (:token op))
+      (= :plus (:type op))
       (cond
         (and (number? left) (number? right)) (+ left right)
         (and (string? left) (string? right)) (str left right)
         :else (runtime-ex op "Expect numbers or strings as arguments"))
 
-      (contains? binary-number-ops (:token op))
+      (contains? binary-number-ops (:type op))
       (evaluate-number-op left op right)
 
-      (contains? equality-ops (:token op))
-      ((equality-ops (:token op)) left right)
+      (contains? equality-ops (:type op))
+      ((equality-ops (:type op)) left right)
 
       :else (runtime-ex op "Invalid binary operation"))))
 
