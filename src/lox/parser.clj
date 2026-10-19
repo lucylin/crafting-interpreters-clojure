@@ -130,7 +130,7 @@
 
 (defn- synchronize
   [tokens]
-  (let [tokens' (if (= :eof (:token (first tokens))) tokens
+  (let [tokens' (if (contains? sync-tokens (:token (first tokens))) tokens
                     (drop-while #(not (is-sync-token %1)) (rest tokens)))]
     (cond
       (= :semicolon (:token (first tokens')))
@@ -149,19 +149,21 @@
   (loop [stmts []
          tokens' tokens
          errors []]
-    (let [{:keys [stmt remaining error]}
-          (try
-            (parse-stmt tokens')
-            (catch clojure.lang.ExceptionInfo e
-              (let [state (:state (ex-data e))]
-                (->stmt-result nil
-                               (synchronize (:remaining state))
-                               (parse-error e)))))
-          stmts' (if stmt (conj stmts stmt) stmts)
-          errors' (if error (conj errors error) errors)]
-      (cond
-        (= :eof (:token (first remaining))) {:stmts stmts' :errors errors'}
-        :else (recur stmts' remaining errors')))))
+    (cond
+      (= :eof (:token (first tokens'))) {:stmts stmts :errors errors}
+
+      :else
+      (let [{:keys [stmt remaining error]}
+            (try
+              (parse-stmt tokens')
+              (catch clojure.lang.ExceptionInfo e
+                (let [state (:state (ex-data e))]
+                  (->stmt-result nil
+                                 (synchronize (:remaining state))
+                                 (parse-error e)))))
+            stmts' (if stmt (conj stmts stmt) stmts)
+            errors' (if error (conj errors error) errors)]
+        (recur stmts' remaining errors')))))
 
 (comment
   (synchronize

@@ -30,6 +30,9 @@
     (:token (first errors))))
 
 (deftest test-expr
+  (testing "empty program"
+    (is (= [] (parse-code-ok ""))))
+
   (testing "literals"
     (are [input expected] (= expected (pretty-parse-expr input))
       "true;" true
@@ -68,23 +71,28 @@
       "(1 + 2;" :semicolon
       "1 + 2);" :right-paren
       "1 + 2" :eof
-      "" :eof)))
+      "1 +" :eof)))
 
 (deftest test-print
   (testing "print success"
     (are [input expected]
-         (= expected (lstmt/pretty-stmt (first (parse-code-ok input))))
-      "print 5;" [:print-stmt 5.0]
-      "print 1 + 2;" [:print-stmt [:plus 1.0 2.0]]))
+         (= expected (map lstmt/pretty-stmt (parse-code-ok input)))
+      "print 5;" [[:print-stmt 5.0]]
+      "print 1 + 2;" [[:print-stmt [:plus 1.0 2.0]]]
+      "1; print 2;" [[:expr-stmt 1.0] [:print-stmt 2.0]]))
 
   (testing "print failure"
     (are [input expected] (= expected (parse-error-token input))
       "print;" :semicolon
       "print 1 print 2;" :print)
 
-    (let [{:keys [stmts errors]} (parse-code-str "print 1 print 2; print 3;")]
+    (let [{:keys [stmts errors]}
+          (parse-code-str "print 1 print 2; print 3; 1 +; 4;")]
+      (is (= :print (:token (first errors))))
       (is (= [:print-stmt 3.0] (lstmt/pretty-stmt (first stmts))))
-      (is (= :print (:token (first errors)))))))
+      (is (= :semicolon (:token (second errors))))
+      (is (= [:expr-stmt 4.0] (lstmt/pretty-stmt (second stmts)))))))
 
 (comment
-  (clojure.test/run-tests 'lox.parser-test))
+  (clojure.test/run-tests 'lox.parser-test)
+  (parse-code-str "1 +; 4;"))
