@@ -1,68 +1,86 @@
 (ns lox.parser-test
   (:require [clojure.test :refer [deftest is testing are]]
             [lox.expr :as lexpr]
-            [lox.parser :as parser]
-            [lox.scanner :as scanner]))
+            [lox.stmt :as lstmt]
+            [lox.test-util :as util]))
 
-(defn- pretty-parse
-  [code] (lexpr/pretty-expr (parser/parse (:tokens (scanner/scan-tokens code)))))
-
-(defn- parse-error-data
+(defn- pretty-parse-expr
   [code]
-  (try (pretty-parse code)
-       :no-error
-       (catch clojure.lang.ExceptionInfo e
-         (if (= :parse-error (:type (ex-data e)))
-           (ex-data e)
-           (throw e)))))
+  (let [stmts (util/parse-ok code)
+        stmt (first stmts)
+        expr (:expr stmt)]
+    (is (= :expr-stmt (:type stmt)))
+    (lexpr/pretty-expr expr)))
+
+(defn- parse-error-token
+  [code]
+  (let [{:keys [stmts errors]} (util/parse-str code)]
+    (is (empty? stmts))
+    (:token (first errors))))
 
 (deftest test-expr
+  (testing "empty program"
+    (is (= [] (util/parse-ok ""))))
+
   (testing "literals"
-    (are [input expected] (= expected (pretty-parse input))
-      "true" true
-      "false" false
-      "nil" nil
-      "\"hello\"" "hello"
-      "123.45" 123.45))
+    (are [input expected] (= expected (pretty-parse-expr input))
+      "true;" true
+      "false;" false
+      "nil;" nil
+      "\"hello\";" "hello"
+      "123.45;" 123.45))
 
   (testing "associativity"
-    (are [input expected] (= expected (pretty-parse input))
-      "1 / 2 / 3" [:slash [:slash 1.0 2.0] 3.0]))
+    (are [input expected] (= expected (pretty-parse-expr input))
+      "1 / 2 / 3;" [:slash [:slash 1.0 2.0] 3.0]))
 
   (testing "equality-comparison precedence"
-    (are [input expected] (= expected (pretty-parse input))
-      "1 < 2 != 2 > 1" [:bang-equal [:less 1.0 2.0] [:greater 2.0 1.0]]))
+    (are [input expected] (= expected (pretty-parse-expr input))
+      "1 < 2 != 2 > 1;" [:bang-equal [:less 1.0 2.0] [:greater 2.0 1.0]]))
 
   (testing "comparison-term precedence"
-    (are [input expected] (= expected (pretty-parse input))
-      "1 + 3 >= 3" [:greater-equal [:plus 1.0 3.0] 3.0]
-      "1 + 3 <= 3" [:less-equal [:plus 1.0 3.0] 3.0]))
+    (are [input expected] (= expected (pretty-parse-expr input))
+      "1 + 3 >= 3;" [:greater-equal [:plus 1.0 3.0] 3.0]
+      "1 + 3 <= 3;" [:less-equal [:plus 1.0 3.0] 3.0]))
 
   (testing "term-factor precedence"
-    (are [input expected] (= expected (pretty-parse input))
-      "1 - 2 * 3" [:minus 1.0 [:star 2.0 3.0]]
-      "(1 + 2) * 3 == 6" [:equal-equal [:star [[:plus 1.0 2.0]] 3.0] 6.0]))
+    (are [input expected] (= expected (pretty-parse-expr input))
+      "1 - 2 * 3;" [:minus 1.0 [:star 2.0 3.0]]
+      "(1 + 2) * 3 == 6;" [:equal-equal [:star [[:plus 1.0 2.0]] 3.0] 6.0]))
 
   (testing "factor-unary precedence & other unary"
-    (are [input expected] (= expected (pretty-parse input))
-      "-1 / 2" [:slash [:minus 1.0] 2.0]
-      "!!false" [:bang [:bang false]]
-      "1 - -2" [:minus 1.0 [:minus 2.0]]))
+    (are [input expected] (= expected (pretty-parse-expr input))
+      "-1 / 2;" [:slash [:minus 1.0] 2.0]
+      "!!false;" [:bang [:bang false]]
+      "1 - -2;" [:minus 1.0 [:minus 2.0]]))
 
-  (testing "expect expr"
-    (let [err (parse-error-data ")")]
-      (is (= :right-paren (:token (:token err)))))
+  (testing "expr errors"
+    (are [input expected] (= expected (parse-error-token input))
+      ");" :right-paren
+      "(1 + 2;" :semicolon
+      "1 + 2);" :right-paren
+      "1 + 2" :eof
+      "1 +" :eof)))
 
-    (let [err (parse-error-data "1 +")]
-      (is (= :eof (:token (:token err))))))
+(deftest test-print
+  (testing "print success"
+    (are [input expected]
+         (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
+      "print 5;" [[:print-stmt 5.0]]
+      "print 1 + 2;" [[:print-stmt [:plus 1.0 2.0]]]
+      "1; print 2;" [[:expr-stmt 1.0] [:print-stmt 2.0]]))
 
-  (testing "incomplete expr"
-    (let [err (parse-error-data "(1 + 2")]
-      (is (= :eof (:token (:token err))))))
+  (testing "print failure"
+    (are [input expected] (= expected (parse-error-token input))
+      "print;" :semicolon
+      "print 1 print 2;" :print)
 
-  (testing "unexpected extra tokens"
-    (let [err (parse-error-data "1 + 2)")]
-      (is (= :right-paren (:token (:token err)))))))
+    (let [{:keys [stmts errors]}
+          (util/parse-str "print 1 print 2; print 3; 1 +; 4;")]
+      (is (= :print (:token (first errors))))
+      (is (= [:print-stmt 3.0] (lstmt/pretty-stmt (first stmts))))
+      (is (= :semicolon (:token (second errors))))
+      (is (= [:expr-stmt 4.0] (lstmt/pretty-stmt (second stmts)))))))
 
 (comment
   (clojure.test/run-tests 'lox.parser-test))
