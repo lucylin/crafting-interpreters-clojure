@@ -46,7 +46,7 @@
     (are [input expected] (= expected (interp-code-print input))
       "print 5;" ["5.0"]
       "print (2 * (5 + 3));" ["16.0"]
-      "")))
+      "" [""])))
 
 (comment
   (clojure.test/run-tests 'lox.interp-test))
