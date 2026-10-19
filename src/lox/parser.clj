@@ -15,7 +15,8 @@
 (defn- parse-error [ex]
   (let [token (:token (ex-data ex))
         message (ex-message ex)]
-    {:message message :line (:line token) :token (:token token)}))
+    {:type :parse-error :message message
+     :line (:line token) :token (:token token)}))
 
 (defn- eat [tokens expected error-message]
   (cond

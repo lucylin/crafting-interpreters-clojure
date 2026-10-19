@@ -1,27 +1,28 @@
 (ns lox.interp-test
-  (:require [clojure.test :refer [deftest is testing are]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing are]]
             [lox.interp :as interp]
-            [lox.parser :as parser]
-            [lox.scanner :as scanner]))
+            [lox.test-util :as util]))
 
-(defn- evaluate-code-str
+(defn- interp-code-print
   [code]
-  (interp/evaluate (:expr (first (:stmts (parser/parse (:tokens (scanner/scan-tokens code))))))))
+  (let [stmts (util/parse-ok code)]
+    (str/split (with-out-str (interp/interpret stmts)) #"\n")))
 
-(deftest test-interp
+(deftest test-interp-exprs
   (testing "literals"
-    (are [input expected] (= expected (evaluate-code-str input))
+    (are [input expected] (= expected (util/eval-expr-str input))
       "1;" 1.0))
 
   (testing "unary"
-    (are [input expected] (= expected (evaluate-code-str input))
+    (are [input expected] (= expected (util/eval-expr-str input))
       "-1;" -1.0
       "!!false;" false
       "!\"\";" false
       "!nil;" true))
 
   (testing "grouping & binary"
-    (are [input expected] (= expected (evaluate-code-str input))
+    (are [input expected] (= expected (util/eval-expr-str input))
       "3 * (5 - 1);" 12.0
       "3 + 2 < 3 + 3;" true
       "\"hello\" + \" \" + \"world\";" "hello world"
@@ -30,13 +31,22 @@
 
 (deftest test-interp-errors
   (testing "type handling"
-    (are [input] (thrown? clojure.lang.ExceptionInfo (evaluate-code-str input))
+    (are [input] (thrown? clojure.lang.ExceptionInfo (util/eval-expr-str input))
       "-\"a\";"
       "1 < \"foo\";"
       "\"x\" - \"y\";"
       "false / true;"
       "nil + nil;"
       "1 + \"a\";")))
+
+(deftest test-interp-print
+  ; TODO: test that print flushes to output before a runtime error
+
+  (testing "print expr"
+    (are [input expected] (= expected (interp-code-print input))
+      "print 5;" ["5.0"]
+      "print (2 * (5 + 3));" ["16.0"]
+      "")))
 
 (comment
   (clojure.test/run-tests 'lox.interp-test))

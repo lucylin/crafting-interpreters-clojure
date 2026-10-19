@@ -1,18 +1,14 @@
 (ns lox.scanner-test
   (:require [clojure.test :refer [deftest is testing are]]
-            [lox.scanner :as scanner]))
+            [lox.scanner :as scanner]
+            [lox.test-util :as util]))
 
-(defn- check-token-ok
-  [input]
-  (let [result (scanner/scan-tokens input)]
-    (is (empty? (:errors result)))
-    (butlast (:tokens result))))
+(defn- check-token-ok [input] (butlast (util/scan-ok input)))
 
 (defn- check-token-lex-ok
   [input]
-  (let [result (scanner/scan-tokens input)]
-    (is (empty? (:errors result)))
-    (butlast (map #(dissoc % :line :literal) (:tokens result)))))
+  (let [tokens (util/scan-ok input)]
+    (butlast (map #(dissoc % :line :literal) tokens))))
 
 (defn- count-tokens-errors
   [input]

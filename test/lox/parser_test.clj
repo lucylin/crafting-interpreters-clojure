@@ -2,22 +2,11 @@
   (:require [clojure.test :refer [deftest is testing are]]
             [lox.expr :as lexpr]
             [lox.stmt :as lstmt]
-            [lox.parser :as parser]
-            [lox.scanner :as scanner]))
-
-(defn- parse-code-str
-  [code]
-  (parser/parse (:tokens (scanner/scan-tokens code))))
-
-(defn- parse-code-ok
-  [code]
-  (let [{:keys [stmts errors]} (parse-code-str code)]
-    (is (empty? errors))
-    stmts))
+            [lox.test-util :as util]))
 
 (defn- pretty-parse-expr
   [code]
-  (let [stmts (parse-code-ok code)
+  (let [stmts (util/parse-ok code)
         stmt (first stmts)
         expr (:expr stmt)]
     (is (= :expr-stmt (:type stmt)))
@@ -25,13 +14,13 @@
 
 (defn- parse-error-token
   [code]
-  (let [{:keys [stmts errors]} (parse-code-str code)]
+  (let [{:keys [stmts errors]} (util/parse-str code)]
     (is (empty? stmts))
     (:token (first errors))))
 
 (deftest test-expr
   (testing "empty program"
-    (is (= [] (parse-code-ok ""))))
+    (is (= [] (util/parse-ok ""))))
 
   (testing "literals"
     (are [input expected] (= expected (pretty-parse-expr input))
@@ -76,7 +65,7 @@
 (deftest test-print
   (testing "print success"
     (are [input expected]
-         (= expected (map lstmt/pretty-stmt (parse-code-ok input)))
+         (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
       "print 5;" [[:print-stmt 5.0]]
       "print 1 + 2;" [[:print-stmt [:plus 1.0 2.0]]]
       "1; print 2;" [[:expr-stmt 1.0] [:print-stmt 2.0]]))
@@ -87,12 +76,11 @@
       "print 1 print 2;" :print)
 
     (let [{:keys [stmts errors]}
-          (parse-code-str "print 1 print 2; print 3; 1 +; 4;")]
+          (util/parse-str "print 1 print 2; print 3; 1 +; 4;")]
       (is (= :print (:token (first errors))))
       (is (= [:print-stmt 3.0] (lstmt/pretty-stmt (first stmts))))
       (is (= :semicolon (:token (second errors))))
       (is (= [:expr-stmt 4.0] (lstmt/pretty-stmt (second stmts)))))))
 
 (comment
-  (clojure.test/run-tests 'lox.parser-test)
-  (parse-code-str "1 +; 4;"))
+  (clojure.test/run-tests 'lox.parser-test))

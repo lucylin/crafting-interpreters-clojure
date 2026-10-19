@@ -1,7 +1,8 @@
 (ns lox.interp)
 
-(defn- runtime-error [op message state]
-  (throw (ex-info message {:type :runtime-error :operation op :state state})))
+(defn- runtime-ex
+  [op message]
+  (throw (ex-info message {:type :runtime-error :line (:line op) :token (:token op)})))
 
 (declare evaluate)
 (defn- evaluate-unary
@@ -10,9 +11,8 @@
     (case (:token (:operator expr))
       :bang (not result)
       :minus (if (number? result) (- result)
-                 (runtime-error (:operator expr)
-                                "Expect number as argument"
-                                {:right (:right expr)})))))
+                 (runtime-ex (:operator expr)
+                             "Expect number as argument")))))
 
 (def ^:private binary-number-ops  ; except +, which is special
   {:minus -
@@ -29,8 +29,7 @@
     (and (number? left) (number? right))
     ((binary-number-ops (:token op)) left right)
 
-    :else (runtime-error op "Expect numbers as arguments"
-                         {:left left :right right})))
+    :else (runtime-ex op "Expect numbers as arguments")))
 
 (def ^:private equality-ops
   {:equal-equal =
@@ -47,8 +46,7 @@
       (cond
         (and (number? left) (number? right)) (+ left right)
         (and (string? left) (string? right)) (str left right)
-        :else (runtime-error op "Expect numbers or strings as arguments"
-                             {:left left :right right}))
+        :else (runtime-ex op "Expect numbers or strings as arguments"))
 
       (contains? binary-number-ops (:token op))
       (evaluate-number-op left op right)
@@ -56,8 +54,7 @@
       (contains? equality-ops (:token op))
       ((equality-ops (:token op)) left right)
 
-      :else (runtime-error op "Invalid binary operation"
-                           {:left left :right right}))))
+      :else (runtime-ex op "Invalid binary operation"))))
 
 (defn evaluate
   [expr]
@@ -66,19 +63,20 @@
     :grouping-expr (evaluate (:expr expr))
     :unary-expr (evaluate-unary expr)
     :binary-expr (evaluate-binary expr)
-    (runtime-error nil "Unknown expression type" {:expr expr})))
+    (runtime-ex nil (str "Unknown expression type " (:type expr)))))
 
 (defn- interpret-stmt
   [stmt]
   (case (:type stmt)
     :expr-stmt (evaluate (:expr stmt))
-
-    ; TODO: see if stringify() from the book is needed
     :print-stmt (println (evaluate (:expr stmt)))
-
-    (runtime-error nil "Unknown statement type" {:stmt stmt})))
+    (runtime-ex nil (str "Unknown statement type " (:type stmt)))))
 
 (defn interpret
   [stmts]
-  ; TODO: exception handling
-  (map interpret-stmt stmts))
+  (loop [stmts' stmts]
+    (cond
+      (empty? stmts') nil
+      :else (do
+              (interpret-stmt (first stmts'))
+              (recur (rest stmts'))))))
