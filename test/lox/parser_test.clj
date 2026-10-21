@@ -2,7 +2,6 @@
   (:require [clojure.test :refer [deftest is testing are]]
             [lox.expr :as lexpr]
             [lox.stmt :as lstmt]
-            [lox.parser :as parser]
             [lox.test-util :as util]))
 
 (defn- pretty-parse-expr

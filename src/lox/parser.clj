@@ -6,7 +6,7 @@
 (defn- ->expr-result [expr remaining] {:expr expr :remaining remaining})
 
 (defn- ->stmt-result
-  ([stmt remaining] {:stmt stmt :remaining remaining :error nil})
+  ([stmt remaining] (->stmt-result stmt remaining nil))
   ([stmt remaining error] {:stmt stmt :remaining remaining :error error}))
 
 (defn- parse-ex [token message state]

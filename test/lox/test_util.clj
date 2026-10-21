@@ -1,5 +1,6 @@
 (ns lox.test-util
   (:require [clojure.test :refer [is]]
+            [lox.env :as lenv]
             [lox.interp :as interp]
             [lox.parser :as parser]
             [lox.scanner :as scanner]))
@@ -18,7 +19,11 @@
     (is (empty? errors))
     stmts))
 
-(defn eval-expr-str [code] (interp/evaluate (:expr (first (parse-ok code)))))
+(defn eval-expr-str
+  [code]
+  (let [eval-result (interp/evaluate (:expr (first (parse-ok code)))
+                                     (lenv/->lox-env))]
+    (first eval-result)))
 
 ; TODO:interp helpers
 ; (defn interp-str [code] (interp/interpret (parse-ok code)))
