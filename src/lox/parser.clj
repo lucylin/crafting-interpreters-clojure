@@ -158,9 +158,10 @@
             initializer (if (= :equal (:type (first remaining)))
                           (parse-expr (rest remaining))
                           nil)
-            remaining' (eat (if initializer (:remaining initializer) remaining)
-                            :semicolon
-                            "Expect ';' after variable declaration")
+            eat-semicolon (eat (if initializer (:remaining initializer) remaining)
+                               :semicolon
+                               "Expect ';' after variable declaration")
+            remaining' (:remaining eat-semicolon)
             stmt (lstmt/->var-stmt var-name
                                    (if initializer (:expr initializer) nil))]
         (->stmt-result stmt remaining'))

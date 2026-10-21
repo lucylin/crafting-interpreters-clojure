@@ -65,8 +65,8 @@
 
   (testing "var expr"
     (are [input expected] (= expected (pretty-parse-expr input))
-      "x" ["x"]
-      "x + 5" [:plus "x" 5.0])))
+      "x;" "x"
+      "x + 5;" [:plus "x" 5.0])))
 
 (deftest test-print
   (testing "print success"
@@ -92,12 +92,11 @@
   (testing "var declaration"
     (are [input expected]
          (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
-      "var x;" [:var-stmt :name "x" nil])))
+      "var x;" [[:var-stmt :name "x" nil]]
+      "var x = 1;" [[:var-stmt :name "x" 1.0]]))
+
+  ; TODO: test errors (missing var name and ';' after declaration
+  )
 
 (comment
-  (clojure.test/run-tests 'lox.parser-test)
-  (parser/parse (util/scan-ok "var x;")))
-; [{:type :var, :lexeme "var", :literal nil, :line 1}
-;  {:type :identifier, :lexeme "x", :literal nil, :line 1}
-;  {:type :semicolon, :lexeme ";", :literal nil, :line 1}
-;  {:type :eof, :lexeme nil, :literal nil, :line 1}]
+  (clojure.test/run-tests 'lox.parser-test))
