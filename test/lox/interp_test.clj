@@ -49,6 +49,8 @@
       "" [""])))
 
 (deftest test-interp-var
+  ; TODO: test error cases
+
   (testing "basics"
     (are [input expected] (= expected (interp-code-print input))
       "var x = 5; print x;" ["5.0"]

@@ -1,11 +1,17 @@
-(ns lox.env)
+(ns lox.env
+  (:require [lox.error :as error]))
 
 (defn ->lox-env [] {:parent nil :vars {}})
 
 (defn assign-var
   [env var-name var-value]
-  ; TODO: figure out error handling if var does not exist
-  (assoc-in env [:vars (:lexeme var-name)] var-value))
+  (cond
+    (nil? env) (error/runtime-ex var-name "Undefined variable")
+
+    (contains? (:vars env) (:lexeme var-name))
+    (assoc-in env [:vars (:lexeme var-name)] var-value)
+
+    :else (assoc env :parent (assign-var (:parent env) var-name var-value))))
 
 (defn declare-var
   ([env var-name] (declare-var env var-name nil))
@@ -16,8 +22,11 @@
 (defn get-var
   [env var-name]
   (cond
-    (nil? env) nil
-    (contains? (:vars env) (:lexeme var-name)) (get-in env [:vars (:lexeme var-name)])
+    (nil? env) (error/runtime-ex var-name "Undefined variable")
+
+    (contains? (:vars env) (:lexeme var-name))
+    (get-in env [:vars (:lexeme var-name)])
+
     :else (get-var (:parent env) var-name)))
 
 (comment
