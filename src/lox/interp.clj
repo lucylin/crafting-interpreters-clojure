@@ -2,6 +2,10 @@
   (:require [lox.env :as lenv]
             [lox.error :as error]))
 
+;
+; evaluating exprs
+;
+
 (defn- ->eval-result [result env] [result env])
 
 (declare evaluate)
@@ -75,6 +79,10 @@
     :assign-expr (evaluate-assign expr env)
     (error/runtime-ex nil (str "Unknown expression type " (:type expr)))))
 
+;
+; interpreting stmts
+;
+
 (defn- interpret-stmt
   [stmt env]
   (case (:type stmt)
@@ -91,7 +99,17 @@
                             (->eval-result nil env))]
       (lenv/declare-var env' var-name result))
 
+    :block-stmt
+    (loop [env' env
+           inner-stmts (:stmts stmt)]
+      (if (empty? inner-stmts) env  ; return original env
+          (recur (interpret-stmt (first inner-stmts) env') (rest inner-stmts))))
+
     (error/runtime-ex nil (str "Unknown statement type " (:type stmt)))))
+
+;
+; public interpret()
+;
 
 (defn interpret
   ([stmts] (interpret stmts (lenv/->lox-env)))

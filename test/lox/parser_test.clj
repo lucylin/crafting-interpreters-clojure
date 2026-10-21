@@ -101,5 +101,14 @@
          (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
       "x = 1;" [[:expr-stmt ["x" ":=" 1.0]]])))
 
+(deftest test-block
+  ; TODO: test errors
+
+  (testing "blocks"
+    (are [input expected]
+         (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
+      "{ var x = 1; print 2; }"
+      [[:block-stmt [[:var-stmt :name "x" 1.0] [:print-stmt 2.0]]]])))
+
 (comment
   (clojure.test/run-tests 'lox.parser-test))

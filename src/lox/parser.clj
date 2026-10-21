@@ -142,25 +142,40 @@
 ; stmt parsing
 ;
 
-(defn- parse-expr-stmt
-  [tokens]
-  (let [{:keys [expr remaining]} (parse-expr tokens)]
-    (->stmt-result (lstmt/->expr-stmt expr) remaining)))
+(defn- parse-stmt-w-expr
+  [stmt-fn tokens]
+  (let [{:keys [expr remaining]} (parse-expr tokens)
+        remaining' (:remaining
+                    (eat remaining :semicolon
+                         "Expect semicolon at end of statement"))]
+    (->stmt-result (stmt-fn expr) remaining')))
 
-(defn- parse-print-stmt
+(declare parse-declaration)
+(defn- parse-block-stmt
   [tokens]
-  (let [{:keys [expr remaining]} (parse-expr tokens)]
-    (->stmt-result (lstmt/->print-stmt expr) remaining)))
+  (loop [stmts []
+         tokens' tokens
+         errors []]
+    (if (#{:right-brace :eof} (:type (first tokens')))
+      (let [remaining (:remaining (eat tokens'
+                                       :right-brace
+                                       "Expect right brace after block"))]
+        (->stmt-result (lstmt/->block-stmt stmts) remaining))
+
+      (let [{:keys [stmt remaining error]} (parse-declaration tokens')
+            stmts' (if stmt (conj stmts stmt) stmts)
+            errors' (if error (conj errors error) errors)]
+        (recur stmts' remaining errors')))))
 
 (defn- parse-stmt
   [tokens]
   (let [curr (first tokens)
-        {:keys [stmt remaining]} (case (:type curr)
-                                   :print (parse-print-stmt (rest tokens))
-                                   (parse-expr-stmt tokens))
-        remaining' (:remaining
-                    (eat remaining :semicolon "Expect semicolon at end of statement"))]
-    (->stmt-result stmt remaining')))
+        {:keys [stmt remaining]}
+        (case (:type curr)
+          :print (parse-stmt-w-expr lstmt/->print-stmt (rest tokens))
+          :left-brace (parse-block-stmt (rest tokens))
+          (parse-stmt-w-expr lstmt/->expr-stmt tokens))]
+    (->stmt-result stmt remaining)))
 
 (defn- parse-declaration
   [tokens]
@@ -209,4 +224,4 @@
 (comment
   (synchronize
    (synchronize (:tokens (scanner/scan-tokens "(foobar); (barfoo)"))))
-  (parse (:tokens (scanner/scan-tokens "x = 1;"))))
+  (parse-declaration (:tokens (scanner/scan-tokens "{var x = 1; print 5;}"))))

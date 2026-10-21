@@ -13,9 +13,14 @@
   [var-name expr]
   {:type :var-stmt :name var-name :expr expr})
 
+(defn ->block-stmt
+  [stmts]
+  {:type :block-stmt :stmts stmts})
+
 (defn pretty-stmt
   [stmt]
   (case (:type stmt)
     :print-stmt [:print-stmt (lexpr/pretty-expr (:expr stmt))]
     :expr-stmt [:expr-stmt (lexpr/pretty-expr (:expr stmt))]
-    :var-stmt [:var-stmt :name (:lexeme (:name stmt)) (lexpr/pretty-expr (:expr stmt))]))
+    :var-stmt [:var-stmt :name (:lexeme (:name stmt)) (lexpr/pretty-expr (:expr stmt))]
+    :block-stmt [:block-stmt (map pretty-stmt (:stmts stmt))]))
