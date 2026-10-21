@@ -52,7 +52,7 @@
             (->expr-result (lexpr/->grouping-expr expr) remaining'))
 
           (= :identifier token-type)
-          (->expr-result (lexpr/->var-expr (:lexeme curr)) (rest tokens))
+          (->expr-result (lexpr/->var-expr curr) (rest tokens))
 
           :else
           (parse-ex (first tokens) "Expect expression"
@@ -96,7 +96,21 @@
   [tokens]
   (parse-binary-help tokens #{:bang-equal :equal-equal} parse-comparison))
 
-(defn- parse-expr [tokens] (parse-equality tokens))
+(defn- parse-assign
+  [tokens]
+  (let [{:keys [expr remaining]} (parse-equality tokens)]
+    (if
+     (= :equal (:type (first remaining)))
+      (let [{rhs :expr, remaining' :remaining} (parse-assign (rest remaining))]
+        (if (= :var-expr (:type expr))
+          (->expr-result (lexpr/->assign-expr (:name expr) rhs) remaining')
+          (parse-ex (first remaining)
+                    "Invalid assignment target"
+                    (rest remaining))))
+
+      (->expr-result expr remaining))))
+
+(defn- parse-expr [tokens] (parse-assign tokens))
 
 ;
 ; synchronize after errors
@@ -154,7 +168,7 @@
     (if (= :var (:type (first tokens)))
       (let [{:keys [eaten remaining]} (eat (rest tokens)
                                            :identifier "Expect variable name")
-            var-name (:lexeme eaten)
+            var-name eaten
             initializer (if (= :equal (:type (first remaining)))
                           (parse-expr (rest remaining))
                           nil)
@@ -194,4 +208,5 @@
 
 (comment
   (synchronize
-   (synchronize (:tokens (scanner/scan-tokens "(foobar); (barfoo)")))))
+   (synchronize (:tokens (scanner/scan-tokens "(foobar); (barfoo)"))))
+  (parse (:tokens (scanner/scan-tokens "x = 1;"))))

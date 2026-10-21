@@ -48,7 +48,11 @@
       "print (2 * (5 + 3));" ["16.0"]
       "" [""])))
 
-(deftest test-interp-var)
+(deftest test-interp-var
+  (testing "basics"
+    (are [input expected] (= expected (interp-code-print input))
+      "var x = 5; print x;" ["5.0"]
+      "var x = 5; x = x + 7; print x;" ["12.0"])))
 
 (comment
   (clojure.test/run-tests 'lox.interp-test))

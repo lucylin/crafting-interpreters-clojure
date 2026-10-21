@@ -91,11 +91,15 @@
   (testing "var declaration"
     (are [input expected]
          (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
-      "var x;" [[:var-stmt :name "x" nil]]
+      "var x; var y;" [[:var-stmt :name "x" nil] [:var-stmt :name "y" nil]]
       "var x = 1;" [[:var-stmt :name "x" 1.0]]))
 
-  ; TODO: test errors (missing var name and ';' after declaration
-  )
+  ; TODO: test errors (missing var name and ';' after declaration)
+
+  (testing "var assignment"
+    (are [input expected]
+         (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
+      "x = 1;" [[:expr-stmt ["x" ":=" 1.0]]])))
 
 (comment
   (clojure.test/run-tests 'lox.parser-test))

@@ -20,6 +20,10 @@
   [var-name]
   {:type :var-expr :name var-name})
 
+(defn ->assign-expr
+  [var-name expr]
+  {:type :assign-expr :name var-name :expr expr})
+
 (defn pretty-expr
   [expr]
   (if
@@ -36,4 +40,6 @@
 
      :grouping-expr [(pretty-expr (:expr expr))]
 
-     :var-expr (:name expr))))
+     :var-expr (:lexeme (:name expr))
+
+     :assign-expr [(:lexeme (:name expr)) ":=" (pretty-expr (:expr expr))])))

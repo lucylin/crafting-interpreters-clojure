@@ -18,4 +18,4 @@
   (case (:type stmt)
     :print-stmt [:print-stmt (lexpr/pretty-expr (:expr stmt))]
     :expr-stmt [:expr-stmt (lexpr/pretty-expr (:expr stmt))]
-    :var-stmt [:var-stmt :name (:name stmt) (lexpr/pretty-expr (:expr stmt))]))
+    :var-stmt [:var-stmt :name (:lexeme (:name stmt)) (lexpr/pretty-expr (:expr stmt))]))

@@ -61,6 +61,14 @@
                  :else (runtime-ex op "Invalid binary operation"))]
     (->eval-result result env')))
 
+(defn- evaluate-assign
+  [expr env]
+  (let [var-name (:name expr)
+        [new-val env'] (evaluate (:expr expr) env)
+        curr-val (lenv/get-var env' var-name)]
+    (if (nil? curr-val) (runtime-ex var-name "Undefined variable")
+        (->eval-result new-val (lenv/assign-var env' var-name new-val)))))
+
 (defn evaluate
   [expr env]
   (case (:type expr)
@@ -68,6 +76,8 @@
     :grouping-expr (evaluate (:expr expr) env)
     :unary-expr (evaluate-unary expr env)
     :binary-expr (evaluate-binary expr env)
+    :var-expr (->eval-result (lenv/get-var env (:name expr)) env)
+    :assign-expr (evaluate-assign expr env)
     (runtime-ex nil (str "Unknown expression type " (:type expr)))))
 
 (defn- interpret-stmt
@@ -84,7 +94,7 @@
     (let [var-name (:name stmt)
           [result env'] (if (:expr stmt) (evaluate (:expr stmt) env)
                             (->eval-result nil env))]
-      (lenv/assign-var env' var-name result))
+      (lenv/declare-var env' var-name result))
 
     (runtime-ex nil (str "Unknown statement type " (:type stmt)))))
 
