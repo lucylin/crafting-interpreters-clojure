@@ -1,4 +1,4 @@
-// fizzbuzz
+// fizzbuzz (2026-10-22 edition)
 
 var n = 15;
 
@@ -28,7 +28,7 @@ while (i <= n) {
         }
     }
 
-    // continue would be really helpful here
+    // elif would be really helpful here
     if (fizz) {
         if (buzz) {
             print "fizzbuzz";
@@ -46,5 +46,9 @@ while (i <= n) {
         }
     }
 
+    // who needs for loops
     i = i + 1;
 }
+
+print "";
+print "tada!";
