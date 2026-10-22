@@ -88,6 +88,14 @@
   (case (:type stmt)
     :expr-stmt (second (evaluate (:expr stmt) env))
 
+    :if-stmt
+    (let [[cond-result env'] (evaluate (:cond-expr stmt) env)
+          env' (if cond-result (interpret-stmt (:then-stmt stmt) env')
+                   (if (:else-stmt stmt)
+                     (interpret-stmt (:else-stmt stmt) env')
+                     env'))]
+      env')
+
     :print-stmt
     (let [[result env'] (evaluate (:expr stmt) env)]
       (println result)

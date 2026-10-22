@@ -110,5 +110,17 @@
       "{ var x = 1; print 2; }"
       [[:block-stmt [[:var-stmt :name "x" 1.0] [:print-stmt 2.0]]]])))
 
+(deftest test-ctrl-flow
+  ; TODO: add additional tests + test errors
+
+  (testing "if"
+    (are [input expected]
+         (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
+      "if (1 == 1) { print true; } else { print false; }"
+      [[:if-stmt
+        [:equal-equal 1.0 1.0]
+        [:block-stmt [[:print-stmt true]]]
+        [:block-stmt [[:print-stmt false]]]]])))
+
 (comment
   (clojure.test/run-tests 'lox.parser-test))

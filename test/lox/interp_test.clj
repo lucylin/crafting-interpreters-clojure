@@ -64,5 +64,11 @@
       "var shadowed = 5; { var shadowed = shadowed * 2; } print shadowed;" ["5.0"]
       "var global = 5; { { var local = 42; global = local; print global; } }" ["42.0"])))
 
+(deftest test-interp-ctrl
+  (testing "if"
+    (are [input expected] (= expected (interp-code-print input))
+      "if (1 == 1) { print true; } else { print false; }" ["true"]
+      "var global = 5; if (global == 2) { print true; } else { print false; }" ["false"])))
+
 (comment
   (clojure.test/run-tests 'lox.interp-test))

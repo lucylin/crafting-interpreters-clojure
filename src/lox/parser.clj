@@ -167,11 +167,37 @@
             errors' (if error (conj errors error) errors)]
         (recur stmts' remaining errors')))))
 
+(declare parse-stmt)
+(defn- parse-if-stmt
+  [tokens]
+  (let [start-cond
+        (:remaining (eat tokens
+                         :left-paren
+                         "Expect left parenthesis after if"))
+
+        {cond-expr :expr remaining :remaining} (parse-expr start-cond)
+
+        end-cond
+        (:remaining (eat remaining
+                         :right-paren
+                         "Expect right parenthesis after if condition"))
+
+        {then-stmt :stmt remaining :remaining}
+        (parse-stmt end-cond)
+
+        {else-stmt :stmt remaining :remaining}
+        (if (= :else (:type (first remaining)))
+          (parse-stmt (rest remaining))
+          (->stmt-result nil remaining))]
+
+    (->stmt-result (lstmt/->if-stmt cond-expr then-stmt else-stmt) remaining)))
+
 (defn- parse-stmt
   [tokens]
   (let [curr (first tokens)
         {:keys [stmt remaining]}
         (case (:type curr)
+          :if (parse-if-stmt (rest tokens))
           :print (parse-stmt-w-expr lstmt/->print-stmt (rest tokens))
           :left-brace (parse-block-stmt (rest tokens))
           (parse-stmt-w-expr lstmt/->expr-stmt tokens))]
@@ -224,4 +250,4 @@
 (comment
   (synchronize
    (synchronize (:tokens (scanner/scan-tokens "(foobar); (barfoo)"))))
-  (parse (:tokens (scanner/scan-tokens "var x = 1; {y = 1; print 5;} "))))
+  (parse (:tokens (scanner/scan-tokens "if (1 == 1) {print true;} else {print false;} "))))
