@@ -1,7 +1,9 @@
 (ns lox.env
   (:require [lox.error :as error]))
 
-(defn ->lox-env [] {:parent nil :vars {}})
+(defn ->lox-env
+  ([] (->lox-env nil))
+  ([parent] {:parent parent :vars {}}))
 
 (defn assign-var
   [env var-name var-value]

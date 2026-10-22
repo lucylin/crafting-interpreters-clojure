@@ -100,9 +100,9 @@
       (lenv/declare-var env' var-name result))
 
     :block-stmt
-    (loop [env' env
+    (loop [env' (lenv/->lox-env env)
            inner-stmts (:stmts stmt)]
-      (if (empty? inner-stmts) env  ; return original env
+      (if (empty? inner-stmts) (:parent env')
           (recur (interpret-stmt (first inner-stmts) env') (rest inner-stmts))))
 
     (error/runtime-ex nil (str "Unknown statement type " (:type stmt)))))

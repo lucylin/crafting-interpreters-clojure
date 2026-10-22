@@ -102,7 +102,7 @@
       "x = 1;" [[:expr-stmt ["x" ":=" 1.0]]])))
 
 (deftest test-block
-  ; TODO: test errors
+  ; TODO: add additional tests + test errors
 
   (testing "blocks"
     (are [input expected]

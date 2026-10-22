@@ -54,7 +54,15 @@
   (testing "basics"
     (are [input expected] (= expected (interp-code-print input))
       "var x = 5; print x;" ["5.0"]
-      "var x = 5; x = x + 7; print x;" ["12.0"])))
+      "var x = 5; x = x + 7; print x;" ["12.0"]))
+
+  (testing "blocks"
+    (are [input expected] (= expected (interp-code-print input))
+      "{ var global = 5; print global; }" ["5.0"]
+      "var global = 5; { var local = global + 7; print local; }" ["12.0"]
+      "var global = 5; { global = global * 2; } print global;" ["10.0"]
+      "var shadowed = 5; { var shadowed = shadowed * 2; } print shadowed;" ["5.0"]
+      "var global = 5; { { var local = 42; global = local; print global; } }" ["42.0"])))
 
 (comment
   (clojure.test/run-tests 'lox.interp-test))

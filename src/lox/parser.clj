@@ -224,4 +224,4 @@
 (comment
   (synchronize
    (synchronize (:tokens (scanner/scan-tokens "(foobar); (barfoo)"))))
-  (parse-declaration (:tokens (scanner/scan-tokens "{var x = 1; print 5;}"))))
+  (parse (:tokens (scanner/scan-tokens "var x = 1; {y = 1; print 5;} "))))
