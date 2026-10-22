@@ -65,7 +65,13 @@
   (testing "var expr"
     (are [input expected] (= expected (pretty-parse-expr input))
       "x;" "x"
-      "x + 5;" [:plus "x" 5.0])))
+      "x + 5;" [:plus "x" 5.0]))
+
+  (testing "logical expr"
+    ; TODO: test hierarchy properly with other exprs
+    (are [input expected] (= expected (pretty-parse-expr input))
+      "x or y and z;" [:or "x" [:and "y" "z"]]
+      "x and y or z;" [:or [:and "x" "y"] "z"])))
 
 (deftest test-print
   (testing "print success"

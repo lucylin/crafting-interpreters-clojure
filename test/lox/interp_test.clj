@@ -27,7 +27,15 @@
       "3 + 2 < 3 + 3;" true
       "\"hello\" + \" \" + \"world\";" "hello world"
       "5 * 5 == (50 / 2);" true
-      "\"foobar\" == \"foo\" + \"bar\";" true)))
+      "\"foobar\" == \"foo\" + \"bar\";" true))
+
+  (testing "logical"
+    (are [input expected] (= expected (util/eval-expr-str input))
+      ; TODO: test that shortcuts actually work
+      "true and true;" true
+      "true or false;" true
+      "false and true;" false
+      "(1 == 1) and (1 == 0);" false)))
 
 (deftest test-interp-errors
   (testing "type handling"

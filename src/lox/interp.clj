@@ -40,6 +40,18 @@
   {:equal-equal =
    :bang-equal not=})
 
+(defn- evaluate-logical  ; separate as we can shortcut
+  [expr env]
+  (let [op (:operator expr)
+        [left env'] (evaluate (:left expr) env)]
+    (if (= :or (:type op))
+      (if left
+        [left env']
+        (evaluate (:right expr) env'))
+      (if (not left)
+        [left env']
+        (evaluate (:right expr) env')))))
+
 (defn- evaluate-binary
   [expr env]
   (let [op (:operator expr)
@@ -72,6 +84,7 @@
   [expr env]
   (case (:type expr)
     :literal-expr (->eval-result (:value expr) env)
+    :logical-expr (evaluate-logical expr env)
     :grouping-expr (evaluate (:expr expr) env)
     :unary-expr (evaluate-unary expr env)
     :binary-expr (evaluate-binary expr env)

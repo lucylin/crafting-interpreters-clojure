@@ -68,17 +68,20 @@
           :else (parse-primary tokens))))
 
 (defn- parse-binary-help
-  [tokens token-types parse-fn]
-  (loop [{:keys [expr remaining]} (parse-fn tokens)]
-    (cond
-      (token-types (:type (first remaining)))
-      (let [subparse (parse-fn (rest remaining))]
-        (recur
-         (->expr-result
-          (lexpr/->binary-expr expr (first remaining) (:expr subparse))
-          (:remaining subparse))))
+  ([tokens token-types parse-fn]
+   (parse-binary-help tokens token-types parse-fn lexpr/->binary-expr))
 
-      :else (->expr-result expr remaining))))
+  ([tokens token-types parse-fn expr-type]
+   (loop [{:keys [expr remaining]} (parse-fn tokens)]
+     (cond
+       (token-types (:type (first remaining)))
+       (let [subparse (parse-fn (rest remaining))]
+         (recur
+          (->expr-result
+           (expr-type expr (first remaining) (:expr subparse))
+           (:remaining subparse))))
+
+       :else (->expr-result expr remaining)))))
 
 (defn- parse-factor
   [tokens] (parse-binary-help tokens #{:slash :star} parse-unary))
@@ -96,9 +99,15 @@
   [tokens]
   (parse-binary-help tokens #{:bang-equal :equal-equal} parse-comparison))
 
+(defn- parse-and
+  [tokens] (parse-binary-help tokens #{:and} parse-equality lexpr/->logical-expr))
+
+(defn- parse-or
+  [tokens] (parse-binary-help tokens #{:or} parse-and lexpr/->logical-expr))
+
 (defn- parse-assign
   [tokens]
-  (let [{:keys [expr remaining]} (parse-equality tokens)]
+  (let [{:keys [expr remaining]} (parse-or tokens)]
     (if
      (= :equal (:type (first remaining)))
       (let [{rhs :expr, remaining' :remaining} (parse-assign (rest remaining))]
@@ -250,4 +259,5 @@
 (comment
   (synchronize
    (synchronize (:tokens (scanner/scan-tokens "(foobar); (barfoo)"))))
-  (parse (:tokens (scanner/scan-tokens "if (1 == 1) {print true;} else {print false;} "))))
+  (parse (:tokens (scanner/scan-tokens "if (1 == 1) {print true;} else {print false;} ")))
+  (parse (:tokens (scanner/scan-tokens "true or false and true;"))))
