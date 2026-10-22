@@ -76,7 +76,12 @@
   (testing "if"
     (are [input expected] (= expected (interp-code-print input))
       "if (1 == 1) { print true; } else { print false; }" ["true"]
-      "var global = 5; if (global == 2) { print true; } else { print false; }" ["false"])))
+      "var global = 5; if (global == 2) { print true; } else { print false; }" ["false"]))
+
+  (testing "while"
+    (are [input expected] (= expected (interp-code-print input))
+      "while (false) { print \"oops\"; } print false;" ["false"]
+      "var x = 2; while (x > 0) { print x; x = x - 1; } print x;" ["2.0" "1.0" "0.0"])))
 
 (comment
   (clojure.test/run-tests 'lox.interp-test))

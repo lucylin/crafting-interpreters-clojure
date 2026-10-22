@@ -22,7 +22,11 @@
 
   ([cond-expr then-stmt else-stmt]
    {:type :if-stmt
-    :cond-expr cond-expr :then-stmt then-stmt :else-stmt else-stmt}))
+    :cond cond-expr :then then-stmt :else else-stmt}))
+
+(defn ->while-stmt
+  [cond-expr body]
+  {:type :while-stmt :cond cond-expr :body body})
 
 (defn pretty-stmt
   [stmt]
@@ -38,6 +42,10 @@
      :block-stmt [:block-stmt (map pretty-stmt (:stmts stmt))]
 
      :if-stmt [:if-stmt
-               (lexpr/pretty-expr (:cond-expr stmt))
-               (pretty-stmt (:then-stmt stmt))
-               (pretty-stmt (:else-stmt stmt))])))
+               (lexpr/pretty-expr (:cond stmt))
+               (pretty-stmt (:then stmt))
+               (pretty-stmt (:else stmt))]
+
+     :while-stmt [:while-stmt
+                  (lexpr/pretty-expr (:cond stmt))
+                  (pretty-stmt (:body stmt))])))

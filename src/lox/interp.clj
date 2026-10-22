@@ -102,12 +102,9 @@
     :expr-stmt (second (evaluate (:expr stmt) env))
 
     :if-stmt
-    (let [[cond-result env'] (evaluate (:cond-expr stmt) env)
-          env' (if cond-result (interpret-stmt (:then-stmt stmt) env')
-                   (if (:else-stmt stmt)
-                     (interpret-stmt (:else-stmt stmt) env')
-                     env'))]
-      env')
+    (let [[cond-result env'] (evaluate (:cond stmt) env)]
+      (if cond-result (interpret-stmt (:then stmt) env')
+          (if (:else stmt) (interpret-stmt (:else stmt) env') env')))
 
     :print-stmt
     (let [[result env'] (evaluate (:expr stmt) env)]
@@ -119,6 +116,13 @@
           [result env'] (if (:expr stmt) (evaluate (:expr stmt) env)
                             (->eval-result nil env))]
       (lenv/declare-var env' var-name result))
+
+    :while-stmt
+    (loop [env' env]
+      (let [[cond-result env'] (evaluate (:cond stmt) env')]
+        (if cond-result
+          (let [env' (interpret-stmt (:body stmt) env')] (recur env'))
+          env')))
 
     :block-stmt
     (loop [env' (lenv/->lox-env env)

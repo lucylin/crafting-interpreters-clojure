@@ -179,18 +179,13 @@
 (declare parse-stmt)
 (defn- parse-if-stmt
   [tokens]
-  (let [start-cond
-        (:remaining (eat tokens
-                         :left-paren
-                         "Expect left parenthesis after if"))
-
+  (let [start-cond (:remaining (eat tokens
+                                    :left-paren
+                                    "Expect left parenthesis after if"))
         {cond-expr :expr remaining :remaining} (parse-expr start-cond)
-
-        end-cond
-        (:remaining (eat remaining
-                         :right-paren
-                         "Expect right parenthesis after if condition"))
-
+        end-cond (:remaining (eat remaining
+                                  :right-paren
+                                  "Expect right parenthesis after if condition"))
         {then-stmt :stmt remaining :remaining}
         (parse-stmt end-cond)
 
@@ -201,6 +196,19 @@
 
     (->stmt-result (lstmt/->if-stmt cond-expr then-stmt else-stmt) remaining)))
 
+(defn- parse-while-stmt
+  [tokens]
+  ; TODO: dedup with if-stmt logic?
+  (let [start-cond (:remaining (eat tokens
+                                    :left-paren
+                                    "Expect left parenthesis after while"))
+        {cond-expr :expr remaining :remaining} (parse-expr start-cond)
+        end-cond (:remaining (eat remaining
+                                  :right-paren
+                                  "Expect right parenthesis after condition"))
+        {body-stmt :stmt remaining :remaining} (parse-stmt end-cond)]
+    (->stmt-result (lstmt/->while-stmt cond-expr body-stmt) remaining)))
+
 (defn- parse-stmt
   [tokens]
   (let [curr (first tokens)
@@ -208,6 +216,7 @@
         (case (:type curr)
           :if (parse-if-stmt (rest tokens))
           :print (parse-stmt-w-expr lstmt/->print-stmt (rest tokens))
+          :while (parse-while-stmt (rest tokens))
           :left-brace (parse-block-stmt (rest tokens))
           (parse-stmt-w-expr lstmt/->expr-stmt tokens))]
     (->stmt-result stmt remaining)))
@@ -260,4 +269,4 @@
   (synchronize
    (synchronize (:tokens (scanner/scan-tokens "(foobar); (barfoo)"))))
   (parse (:tokens (scanner/scan-tokens "if (1 == 1) {print true;} else {print false;} ")))
-  (parse (:tokens (scanner/scan-tokens "true or false and true;"))))
+  (parse (:tokens (scanner/scan-tokens "while (1 == 1) { print true; }"))))

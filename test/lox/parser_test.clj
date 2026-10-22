@@ -126,7 +126,15 @@
       [[:if-stmt
         [:equal-equal 1.0 1.0]
         [:block-stmt [[:print-stmt true]]]
-        [:block-stmt [[:print-stmt false]]]]])))
+        [:block-stmt [[:print-stmt false]]]]]))
+
+  (testing "while"
+    (are [input expected]
+         (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
+      "while (1 == 1) { print true; }"
+      [[:while-stmt
+        [:equal-equal 1.0 1.0]
+        [:block-stmt [[:print-stmt true]]]]])))
 
 (comment
   (clojure.test/run-tests 'lox.parser-test))
