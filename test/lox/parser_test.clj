@@ -60,7 +60,12 @@
       "(1 + 2;" :semicolon
       "1 + 2);" :right-paren
       "1 + 2" :eof
-      "1 +" :eof)))
+      "1 +" :eof))
+
+  (testing "var expr"
+    (are [input expected] (= expected (pretty-parse-expr input))
+      "x;" "x"
+      "x + 5;" [:plus "x" 5.0])))
 
 (deftest test-print
   (testing "print success"
@@ -81,6 +86,29 @@
       (is (= [:print-stmt 3.0] (lstmt/pretty-stmt (first stmts))))
       (is (= :semicolon (:token (second errors))))
       (is (= [:expr-stmt 4.0] (lstmt/pretty-stmt (second stmts)))))))
+
+(deftest test-var
+  (testing "var declaration"
+    (are [input expected]
+         (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
+      "var x; var y;" [[:var-stmt :name "x" nil] [:var-stmt :name "y" nil]]
+      "var x = 1;" [[:var-stmt :name "x" 1.0]]))
+
+  ; TODO: test errors (missing var name and ';' after declaration)
+
+  (testing "var assignment"
+    (are [input expected]
+         (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
+      "x = 1;" [[:expr-stmt ["x" ":=" 1.0]]])))
+
+(deftest test-block
+  ; TODO: add additional tests + test errors
+
+  (testing "blocks"
+    (are [input expected]
+         (= expected (map lstmt/pretty-stmt (util/parse-ok input)))
+      "{ var x = 1; print 2; }"
+      [[:block-stmt [[:var-stmt :name "x" 1.0] [:print-stmt 2.0]]]])))
 
 (comment
   (clojure.test/run-tests 'lox.parser-test))

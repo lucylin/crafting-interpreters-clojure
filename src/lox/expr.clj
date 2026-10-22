@@ -16,16 +16,30 @@
   [expr]
   {:type :grouping-expr :expr expr})
 
+(defn ->var-expr
+  [var-name]
+  {:type :var-expr :name var-name})
+
+(defn ->assign-expr
+  [var-name expr]
+  {:type :assign-expr :name var-name :expr expr})
+
 (defn pretty-expr
   [expr]
-  (case (:type expr)
-    :literal-expr (:value expr)
+  (if
+   (nil? expr) nil
+   (case (:type expr)
+     :literal-expr (:value expr)
 
-    :unary-expr [(:type (:operator expr))
-                 (pretty-expr (:right expr))]
-
-    :binary-expr [(:type (:operator expr))
-                  (pretty-expr (:left expr))
+     :unary-expr [(:type (:operator expr))
                   (pretty-expr (:right expr))]
 
-    :grouping-expr [(pretty-expr (:expr expr))]))
+     :binary-expr [(:type (:operator expr))
+                   (pretty-expr (:left expr))
+                   (pretty-expr (:right expr))]
+
+     :grouping-expr [(pretty-expr (:expr expr))]
+
+     :var-expr (:lexeme (:name expr))
+
+     :assign-expr [(:lexeme (:name expr)) ":=" (pretty-expr (:expr expr))])))
