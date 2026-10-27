@@ -40,6 +40,18 @@
   {:equal-equal =
    :bang-equal not=})
 
+(defn- evaluate-logical  ; separate as we can shortcut
+  [expr env]
+  (let [op (:operator expr)
+        [left env'] (evaluate (:left expr) env)]
+    (if (= :or (:type op))
+      (if left
+        [left env']
+        (evaluate (:right expr) env'))
+      (if (not left)
+        [left env']
+        (evaluate (:right expr) env')))))
+
 (defn- evaluate-binary
   [expr env]
   (let [op (:operator expr)
@@ -72,6 +84,7 @@
   [expr env]
   (case (:type expr)
     :literal-expr (->eval-result (:value expr) env)
+    :logical-expr (evaluate-logical expr env)
     :grouping-expr (evaluate (:expr expr) env)
     :unary-expr (evaluate-unary expr env)
     :binary-expr (evaluate-binary expr env)
@@ -88,6 +101,11 @@
   (case (:type stmt)
     :expr-stmt (second (evaluate (:expr stmt) env))
 
+    :if-stmt
+    (let [[cond-result env'] (evaluate (:cond stmt) env)]
+      (if cond-result (interpret-stmt (:then stmt) env')
+          (if (:else stmt) (interpret-stmt (:else stmt) env') env')))
+
     :print-stmt
     (let [[result env'] (evaluate (:expr stmt) env)]
       (println result)
@@ -98,6 +116,13 @@
           [result env'] (if (:expr stmt) (evaluate (:expr stmt) env)
                             (->eval-result nil env))]
       (lenv/declare-var env' var-name result))
+
+    :while-stmt
+    (loop [env' env]
+      (let [[cond-result env'] (evaluate (:cond stmt) env')]
+        (if cond-result
+          (let [env' (interpret-stmt (:body stmt) env')] (recur env'))
+          env')))
 
     :block-stmt
     (loop [env' (lenv/->lox-env env)

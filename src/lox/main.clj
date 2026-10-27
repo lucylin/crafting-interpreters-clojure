@@ -6,7 +6,7 @@
 (defn run
   "Run the given code string"
   [code]
-  (interp/interpret (parser/parse (:tokens (scanner/scan-tokens code)))))
+  (interp/interpret (:stmts (parser/parse (:tokens (scanner/scan-tokens code))))))
 
 (defn- run-file
   "Load the file at path and run it"
@@ -16,6 +16,7 @@
 (defn- run-prompt
   "Read input from the cmdline until there is none"
   []
+  ; TODO: maintain env across lines
   (loop []
     (print "> ")
     (flush)

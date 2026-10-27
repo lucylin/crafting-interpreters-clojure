@@ -4,6 +4,10 @@
   [value]
   {:type :literal-expr :value value})
 
+(defn ->logical-expr
+  [left operator right]
+  {:type :logical-expr :left left :operator operator :right right})
+
 (defn ->unary-expr
   [operator right]
   {:type :unary-expr :operator operator :right right})
@@ -30,6 +34,10 @@
    (nil? expr) nil
    (case (:type expr)
      :literal-expr (:value expr)
+
+     :logical-expr [(:type (:operator expr))
+                    (pretty-expr (:left expr))
+                    (pretty-expr (:right expr))]
 
      :unary-expr [(:type (:operator expr))
                   (pretty-expr (:right expr))]

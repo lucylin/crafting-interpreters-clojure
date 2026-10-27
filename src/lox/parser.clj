@@ -68,17 +68,20 @@
           :else (parse-primary tokens))))
 
 (defn- parse-binary-help
-  [tokens token-types parse-fn]
-  (loop [{:keys [expr remaining]} (parse-fn tokens)]
-    (cond
-      (token-types (:type (first remaining)))
-      (let [subparse (parse-fn (rest remaining))]
-        (recur
-         (->expr-result
-          (lexpr/->binary-expr expr (first remaining) (:expr subparse))
-          (:remaining subparse))))
+  ([tokens token-types parse-fn]
+   (parse-binary-help tokens token-types parse-fn lexpr/->binary-expr))
 
-      :else (->expr-result expr remaining))))
+  ([tokens token-types parse-fn expr-type]
+   (loop [{:keys [expr remaining]} (parse-fn tokens)]
+     (cond
+       (token-types (:type (first remaining)))
+       (let [subparse (parse-fn (rest remaining))]
+         (recur
+          (->expr-result
+           (expr-type expr (first remaining) (:expr subparse))
+           (:remaining subparse))))
+
+       :else (->expr-result expr remaining)))))
 
 (defn- parse-factor
   [tokens] (parse-binary-help tokens #{:slash :star} parse-unary))
@@ -96,9 +99,15 @@
   [tokens]
   (parse-binary-help tokens #{:bang-equal :equal-equal} parse-comparison))
 
+(defn- parse-and
+  [tokens] (parse-binary-help tokens #{:and} parse-equality lexpr/->logical-expr))
+
+(defn- parse-or
+  [tokens] (parse-binary-help tokens #{:or} parse-and lexpr/->logical-expr))
+
 (defn- parse-assign
   [tokens]
-  (let [{:keys [expr remaining]} (parse-equality tokens)]
+  (let [{:keys [expr remaining]} (parse-or tokens)]
     (if
      (= :equal (:type (first remaining)))
       (let [{rhs :expr, remaining' :remaining} (parse-assign (rest remaining))]
@@ -167,12 +176,47 @@
             errors' (if error (conj errors error) errors)]
         (recur stmts' remaining errors')))))
 
+(declare parse-stmt)
+(defn- parse-if-stmt
+  [tokens]
+  (let [start-cond (:remaining (eat tokens
+                                    :left-paren
+                                    "Expect left parenthesis after if"))
+        {cond-expr :expr remaining :remaining} (parse-expr start-cond)
+        end-cond (:remaining (eat remaining
+                                  :right-paren
+                                  "Expect right parenthesis after if condition"))
+        {then-stmt :stmt remaining :remaining}
+        (parse-stmt end-cond)
+
+        {else-stmt :stmt remaining :remaining}
+        (if (= :else (:type (first remaining)))
+          (parse-stmt (rest remaining))
+          (->stmt-result nil remaining))]
+
+    (->stmt-result (lstmt/->if-stmt cond-expr then-stmt else-stmt) remaining)))
+
+(defn- parse-while-stmt
+  [tokens]
+  ; TODO: dedup with if-stmt logic?
+  (let [start-cond (:remaining (eat tokens
+                                    :left-paren
+                                    "Expect left parenthesis after while"))
+        {cond-expr :expr remaining :remaining} (parse-expr start-cond)
+        end-cond (:remaining (eat remaining
+                                  :right-paren
+                                  "Expect right parenthesis after condition"))
+        {body-stmt :stmt remaining :remaining} (parse-stmt end-cond)]
+    (->stmt-result (lstmt/->while-stmt cond-expr body-stmt) remaining)))
+
 (defn- parse-stmt
   [tokens]
   (let [curr (first tokens)
         {:keys [stmt remaining]}
         (case (:type curr)
+          :if (parse-if-stmt (rest tokens))
           :print (parse-stmt-w-expr lstmt/->print-stmt (rest tokens))
+          :while (parse-while-stmt (rest tokens))
           :left-brace (parse-block-stmt (rest tokens))
           (parse-stmt-w-expr lstmt/->expr-stmt tokens))]
     (->stmt-result stmt remaining)))
@@ -224,4 +268,5 @@
 (comment
   (synchronize
    (synchronize (:tokens (scanner/scan-tokens "(foobar); (barfoo)"))))
-  (parse (:tokens (scanner/scan-tokens "var x = 1; {y = 1; print 5;} "))))
+  (parse (:tokens (scanner/scan-tokens "if (1 == 1) {print true;} else {print false;} ")))
+  (parse (:tokens (scanner/scan-tokens "while (1 == 1) { print true; }"))))

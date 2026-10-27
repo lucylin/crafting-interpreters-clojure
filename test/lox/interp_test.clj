@@ -27,7 +27,15 @@
       "3 + 2 < 3 + 3;" true
       "\"hello\" + \" \" + \"world\";" "hello world"
       "5 * 5 == (50 / 2);" true
-      "\"foobar\" == \"foo\" + \"bar\";" true)))
+      "\"foobar\" == \"foo\" + \"bar\";" true))
+
+  (testing "logical"
+    (are [input expected] (= expected (util/eval-expr-str input))
+      ; TODO: test that shortcuts actually work
+      "true and true;" true
+      "true or false;" true
+      "false and true;" false
+      "(1 == 1) and (1 == 0);" false)))
 
 (deftest test-interp-errors
   (testing "type handling"
@@ -63,6 +71,17 @@
       "var global = 5; { global = global * 2; } print global;" ["10.0"]
       "var shadowed = 5; { var shadowed = shadowed * 2; } print shadowed;" ["5.0"]
       "var global = 5; { { var local = 42; global = local; print global; } }" ["42.0"])))
+
+(deftest test-interp-ctrl
+  (testing "if"
+    (are [input expected] (= expected (interp-code-print input))
+      "if (1 == 1) { print true; } else { print false; }" ["true"]
+      "var global = 5; if (global == 2) { print true; } else { print false; }" ["false"]))
+
+  (testing "while"
+    (are [input expected] (= expected (interp-code-print input))
+      "while (false) { print \"oops\"; } print false;" ["false"]
+      "var x = 2; while (x > 0) { print x; x = x - 1; } print x;" ["2.0" "1.0" "0.0"])))
 
 (comment
   (clojure.test/run-tests 'lox.interp-test))

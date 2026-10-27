@@ -1,0 +1,54 @@
+// fizzbuzz (2026-10-22 edition)
+
+var n = 15;
+
+var i = 1;
+while (i <= n) {
+    var fizz = false;
+    // oops we don't have mod in this language
+    {
+        var j = i;
+        while (j > 0) {
+            j = j - 3;
+        }
+        if (j == 0) {
+            fizz = true;
+        }
+    }
+
+    var buzz = false;
+    // and i haven't gotten to functions yet
+    {
+        var j = i;
+        while (j > 0) {
+            j = j - 5;
+        }
+        if (j == 0) {
+            buzz = true;
+        }
+    }
+
+    // elif would be really helpful here
+    if (fizz) {
+        if (buzz) {
+            print "fizzbuzz";
+        }
+        else {
+            print "fizz";
+        }
+    }
+    else {
+        if (buzz) {
+            print "buzz";
+        }
+        else {
+            print i;
+        }
+    }
+
+    // who needs for loops
+    i = i + 1;
+}
+
+print "";
+print "tada!";
